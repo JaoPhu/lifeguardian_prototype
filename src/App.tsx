@@ -4,7 +4,17 @@ import PhoneFrame from './components/PhoneFrame';
 import DemoSetup from './components/DemoSetup';
 import SimulationRunning from './components/SimulationRunning';
 import SplashScreen from './components/auth/SplashScreen';
+import WelcomeScreen from './components/auth/WelcomeScreen';
+import PreLoginScreen from './components/auth/PreLoginScreen';
+import RegisterScreen from './components/auth/RegisterScreen';
+import ForgotPasswordScreen from './components/auth/ForgotPasswordScreen';
+import OtpVerificationScreen from './components/auth/OtpVerificationScreen';
+import ResetPasswordScreen from './components/auth/ResetPasswordScreen';
+import PasswordChangedScreen from './components/auth/PasswordChangedScreen';
+import GoogleLoginScreen from './components/auth/GoogleLoginScreen';
+import AppleLoginScreen from './components/auth/AppleLoginScreen';
 import LoginScreen from './components/auth/LoginScreen';
+import EditProfileScreen from './components/profile/EditProfileScreen';
 import Dashboard from './components/dashboard/Dashboard';
 import EventsScreen from './components/EventsScreen';
 import StatusScreen, { MonitorStatus } from './components/StatusScreen';
@@ -19,7 +29,7 @@ import clsx from 'clsx';
 import GroupManagementScreen from './components/group/GroupManagementScreen';
 
 function App() {
-    const [currentScreen, setCurrentScreen] = useState<'splash' | 'login' | 'main'>('splash');
+    const [currentScreen, setCurrentScreen] = useState<'splash' | 'welcome' | 'pre-login' | 'register' | 'forgot-password' | 'otp-verification' | 'reset-password' | 'password-changed' | 'social-google' | 'social-apple' | 'edit-profile' | 'login' | 'main'>('splash');
     const [activeTab, setActiveTab] = useState<'overview' | 'statistics' | 'status' | 'users' | 'settings' | 'notifications'>('overview');
     const [settingsView, setSettingsView] = useState<'main' | 'ai-debug'>('main');
     const [simulationState, setSimulationState] = useState<'setup' | 'running'>('setup');
@@ -53,7 +63,21 @@ function App() {
     ]);
 
     // Handlers
-    const handleSplashFinish = () => setCurrentScreen('login');
+    const handleSplashFinish = () => setCurrentScreen('welcome');
+    const handleGetStarted = () => setCurrentScreen('pre-login');
+    const handleBackToWelcome = () => setCurrentScreen('welcome');
+    const handleGoToLogin = () => setCurrentScreen('login');
+    const handleGoToRegister = () => setCurrentScreen('register');
+    const handleGoToForgotPassword = () => setCurrentScreen('forgot-password');
+    const handleGoToOtp = () => setCurrentScreen('otp-verification');
+    const handleGoToResetPassword = () => setCurrentScreen('reset-password');
+    const handleGoToPasswordChanged = () => setCurrentScreen('password-changed');
+    const handleGoToEditProfile = () => setCurrentScreen('edit-profile');
+    const handleGoToGoogle = () => setCurrentScreen('social-google');
+    const handleGoToApple = () => setCurrentScreen('social-apple');
+    const handleBackToPreLogin = () => setCurrentScreen('pre-login');
+    const handleBackToForgot = () => setCurrentScreen('forgot-password');
+    const handleBackToLogin = () => setCurrentScreen('login');
     const handleLogin = () => {
         setCurrentScreen('main');
         setActiveTab('overview');
@@ -159,8 +183,110 @@ function App() {
             return <SplashScreen onFinish={handleSplashFinish} />;
         }
 
+        if (currentScreen === 'welcome') {
+            return <WelcomeScreen onGetStarted={handleGetStarted} />;
+        }
+
+        if (currentScreen === 'pre-login') {
+            return (
+                <PreLoginScreen
+                    onBack={handleBackToWelcome}
+                    onLogin={handleGoToLogin}
+                    onRegister={handleGoToRegister}
+                />
+            );
+        }
+
+        if (currentScreen === 'register') {
+            return (
+                <RegisterScreen
+                    onBack={handleBackToPreLogin}
+                    onLogin={handleGoToLogin}
+                    onRegister={handleGoToEditProfile} // Success goes to Edit Profile
+                    onGoogleLogin={handleGoToGoogle}
+                    onAppleLogin={handleGoToApple}
+                />
+            );
+        }
+
+        if (currentScreen === 'forgot-password') {
+            return (
+                <ForgotPasswordScreen
+                    onBack={handleBackToLogin}
+                    onSend={(email) => {
+                        console.log("Reset password for:", email);
+                        handleGoToOtp();
+                    }}
+                />
+            );
+        }
+
+        if (currentScreen === 'otp-verification') {
+            return (
+                <OtpVerificationScreen
+                    onBack={handleBackToForgot}
+                    onContinue={(otp) => {
+                        console.log("Verify OTP:", otp);
+                        handleGoToResetPassword();
+                    }}
+                />
+            );
+        }
+
+        if (currentScreen === 'reset-password') {
+            return (
+                <ResetPasswordScreen
+                    onBack={handleGoToOtp}
+                    onSubmit={(password) => {
+                        console.log("New password set:", password);
+                        handleGoToPasswordChanged();
+                    }}
+                />
+            );
+        }
+
+        if (currentScreen === 'password-changed') {
+            return <PasswordChangedScreen onLogin={handleGoToLogin} />;
+        }
+
+        if (currentScreen === 'social-google') {
+            return (
+                <GoogleLoginScreen
+                    onBack={handleBackToLogin}
+                    onLoginSuccess={handleGoToEditProfile}
+                />
+            );
+        }
+
+        if (currentScreen === 'social-apple') {
+            return (
+                <AppleLoginScreen
+                    onBack={handleBackToLogin}
+                    onLoginSuccess={handleGoToEditProfile}
+                />
+            );
+        }
+
+        if (currentScreen === 'edit-profile') {
+            return (
+                <EditProfileScreen
+                    onBack={handleBackToLogin}
+                    onComplete={handleLogin}
+                />
+            );
+        }
+
         if (currentScreen === 'login') {
-            return <LoginScreen onLogin={handleLogin} />;
+            return (
+                <LoginScreen
+                    onLogin={handleLogin}
+                    onBack={handleBackToPreLogin}
+                    onRegister={handleGoToRegister}
+                    onForgotPassword={handleGoToForgotPassword}
+                    onGoogleLogin={handleGoToGoogle}
+                    onAppleLogin={handleGoToApple}
+                />
+            );
         }
 
         // Main App content with Bottom Nav

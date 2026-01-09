@@ -1,22 +1,24 @@
-import appleIcon from '../../assets/icons/apple.png';
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, Check, ChevronLeft } from 'lucide-react';
-import clsx from 'clsx';
+import appleIcon from '../../assets/icons/apple.png'; // Assuming this exists from LoginScreen
+// If appleIcon doesn't exist, I'll need to mock it or handle it.
+// Checking LoginScreen again, it imports appleIcon.
 
-interface LoginScreenProps {
-    onLogin: () => void;
+interface RegisterScreenProps {
     onBack: () => void;
     onRegister: () => void;
-    onForgotPassword: () => void;
-    onGoogleLogin: () => void;
-    onAppleLogin: () => void;
+    onLogin: () => void;
+    onGoogleLogin?: () => void;
+    onAppleLogin?: () => void;
 }
 
-const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onBack, onRegister, onForgotPassword, onGoogleLogin, onAppleLogin }) => {
+const RegisterScreen: React.FC<RegisterScreenProps> = ({ onBack, onRegister, onLogin, onGoogleLogin, onAppleLogin }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    const [keepLoggedIn, setKeepLoggedIn] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [agreeTerms, setAgreeTerms] = useState(false);
 
     return (
         <div className="flex flex-col h-full bg-white relative font-sans overflow-y-auto scrollbar-hide">
@@ -28,9 +30,8 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onBack, onRegister, 
                 >
                     <ChevronLeft className="w-6 h-6 text-gray-900 group-hover:-translate-x-0.5 transition-transform" />
                 </button>
-
-                <h1 className="text-3xl font-bold text-[#0D9488] mb-1 tracking-tight">Login account</h1>
-                <p className="text-gray-500 text-sm font-normal">Welcome back!</p>
+                <h1 className="text-3xl font-bold text-[#0D9488] mb-1 tracking-tight">Create account</h1>
+                <p className="text-gray-500 text-sm font-normal">Sign up to continue</p>
             </div>
 
             {/* Form */}
@@ -63,7 +64,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onBack, onRegister, 
                             type={showPassword ? "text" : "password"}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Enter password"
+                            placeholder="Create password"
                             className="w-full bg-white border border-gray-200 rounded-xl pl-12 pr-12 py-3.5 text-gray-900 text-sm placeholder-gray-400 focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none transition-all shadow-sm group-focus-within:shadow-md"
                         />
                         <button
@@ -75,31 +76,48 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onBack, onRegister, 
                     </div>
                 </div>
 
-                {/* Options */}
-                <div className="flex items-center justify-between pt-1">
-                    <button
-                        onClick={() => setKeepLoggedIn(!keepLoggedIn)}
-                        className="flex items-center gap-2 group outline-none"
-                    >
-                        <div className={clsx(
-                            "w-5 h-5 rounded border flex items-center justify-center transition-all",
-                            keepLoggedIn ? "bg-gray-800 border-gray-800" : "bg-white border-gray-400 group-hover:border-gray-500"
-                        )}>
-                            {keepLoggedIn && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
+                {/* Confirm Password */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-900 mb-2">Confirm password</label>
+                    <div className="relative group">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-teal-600 transition-colors">
+                            <Lock className="w-5 h-5" />
                         </div>
-                        <span className="text-sm text-gray-500 font-normal">Keep me logged in</span>
-                    </button>
-                    <button onClick={onForgotPassword} className="text-sm font-bold text-gray-700 hover:text-gray-900">
-                        Forgot password?
-                    </button>
+                        <input
+                            type={showConfirmPassword ? "text" : "password"}
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            placeholder="Re-enter password"
+                            className="w-full bg-white border border-gray-200 rounded-xl pl-12 pr-12 py-3.5 text-gray-900 text-sm placeholder-gray-400 focus:ring-1 focus:ring-teal-500 focus:border-teal-500 outline-none transition-all shadow-sm group-focus-within:shadow-md"
+                        />
+                        <button
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 outline-none transition-colors"
+                        >
+                            {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </button>
+                    </div>
                 </div>
 
-                {/* Login Button */}
+                {/* Terms Checkbox */}
+                <div className="flex items-center gap-3 pt-1">
+                    <button
+                        onClick={() => setAgreeTerms(!agreeTerms)}
+                        className={`w-6 h-6 rounded border flex items-center justify-center transition-all ${agreeTerms ? 'bg-teal-600 border-teal-600' : 'bg-white border-gray-400'}`}
+                    >
+                        {agreeTerms && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
+                    </button>
+                    <span className="text-gray-500 text-sm">
+                        I agree to <span className="font-bold text-gray-700">Terms</span> and <span className="font-bold text-gray-700">Conditions</span>
+                    </span>
+                </div>
+
+                {/* Register Button */}
                 <button
-                    onClick={onLogin}
+                    onClick={onRegister}
                     className="w-full bg-[#0D9488] hover:bg-[#0F766E] active:scale-[0.98] text-white text-lg font-bold py-3.5 rounded-lg shadow-lg shadow-teal-500/20 transition-all mt-4"
                 >
-                    Login
+                    Create account
                 </button>
 
                 {/* Divider */}
@@ -130,19 +148,23 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, onBack, onRegister, 
                         onClick={onAppleLogin}
                         className="flex items-center justify-center gap-2 py-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
                     >
+                        {/* We use appleIcon from import if it works, else use text or svg */}
+                        {/* Assuming import worked similar to LoginScreen */}
                         <img src={appleIcon} alt="" className="w-5 h-5" />
                         <span className="text-sm font-semibold text-gray-700">Apple</span>
                     </button>
                 </div>
 
-                {/* Footer */}
+                {/* Footer Login Link */}
                 <div className="pt-4 text-center pb-2">
-                    <span className="text-gray-500 text-sm">Don’t have an account? </span>
-                    <button onClick={onRegister} className="text-gray-900 text-sm font-semibold hover:underline">Sign up</button>
+                    <span className="text-gray-500 text-sm">Already have an account? </span>
+                    <button onClick={onLogin} className="text-gray-900 text-sm font-semibold hover:underline">
+                        Login
+                    </button>
                 </div>
             </div>
         </div>
     );
 };
 
-export default LoginScreen;
+export default RegisterScreen;
