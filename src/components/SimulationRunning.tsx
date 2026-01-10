@@ -38,8 +38,92 @@ const SimulationRunning: React.FC<SimulationRunningProps> = ({ config, onStop, o
     // 1 Real Sec = 1 Sim Minute * Speed
     const currentTime = new Date(startDateTime.getTime() + (videoTimeSec * config.speed * 60 * 1000));
 
-    const [stickmanPosture, setStickmanPosture] = useState<'standing' | 'sitting' | 'laying' | 'falling'>('standing');
+    const [stickmanPosture, setStickmanPosture] = useState<'standing' | 'sitting' | 'laying' | 'falling' | 'working'>('standing');
     const [hasTriggeredEvent, setHasTriggeredEvent] = useState(false);
+
+    // --- REAL-TIME DETECTION STATE MACHINE ---
+    const currentPostureRef = useRef<'standing' | 'sitting' | 'falling' | 'laying' | 'working'>('standing');
+    const postureStartTimeRef = useRef<number>(Date.now());
+    const fallCandidateStartRef = useRef<number | null>(null);
+
+    const handlePostureChange = (detected: 'standing' | 'sitting' | 'falling' | 'unknown' | 'working') => {
+        if (detected === 'unknown') return;
+
+        const now = Date.now();
+        const current = currentPostureRef.current;
+
+        // 1. FALL DETECTION BUFFER (5 Seconds)
+        if (detected === 'falling') {
+            if (fallCandidateStartRef.current === null) {
+                fallCandidateStartRef.current = now; // Start timer
+            }
+
+            const fallingDuration = now - fallCandidateStartRef.current;
+            if (fallingDuration < 5000) {
+                // Not yet confirmed as falling, behave as if we are still in previous state OR intermediate?
+                // Just return wait.
+                // OPTIONAL: Update stickman to 'dying' or generic? No, keep steady.
+                return;
+            }
+            // If > 5000, we proceed to confirm 'falling'
+        } else {
+            // If we detected something else, reset fall timer
+            fallCandidateStartRef.current = null;
+        }
+
+        // 2. STATE TRANSITION
+        // If detected is different from current (and passed buffer if falling)
+        // Since we return early above if falling < 5s, if we reach here with 'falling', it is confirmed.
+
+        // Debounce others? Maybe 500ms for sitting/standing to prevent jitter?
+        // Let's implement a simple immediate switch for Sit/Stand for responsiveness as requested.
+
+        if (detected !== current) {
+            // A. End Previous Event & Log it
+            const durationMs = now - postureStartTimeRef.current;
+            const durationSec = Math.floor(durationMs / 1000);
+
+            // Format Duration
+            const hrs = Math.floor(durationSec / 3600);
+            const mins = Math.floor((durationSec % 3600) / 60);
+            const secs = durationSec % 60;
+            let durStr = `${mins}m ${secs}s`;
+            if (hrs > 0) durStr = `${hrs}h ${durStr}`;
+
+            // Only archive meaningful events (> 2 seconds?) to avoid noise
+            if (durationSec > 2) {
+                const timeStr = new Date(postureStartTimeRef.current).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const newEvent: SimulationEvent = {
+                    id: crypto.randomUUID(),
+                    // Map internal posture to nice event names
+                    type: current === 'standing' ? 'standing' : current === 'sitting' ? 'sitting' : 'falling', // working skipped for now if not detected
+                    timestamp: timeStr,
+                    snapshotUrl: '',
+                    isCritical: current === 'falling', // The event ENDED was falling
+                    duration: durStr
+                };
+
+                // Note: The user wants to see "Sitting... 5m". 
+                // Using `onEventAdded` typically appends to list.
+                // So this logs "I WAS Sitting for 5m" when I stand up.
+                // This is standard log behavior.
+                onEventAdded(newEvent);
+            }
+
+            // B. Update State
+            currentPostureRef.current = detected;
+            postureStartTimeRef.current = now;
+            setStickmanPosture(detected === 'falling' ? 'falling' : detected === 'sitting' ? 'sitting' : 'standing');
+
+            // Special: If Falling Confirmed, we might want to trigger an immediate Alert?
+            // User request: "collect data when fall 5s". The event log above does it "after" change?
+            // Actually, usually we want to see "Falling" START immediately or after 5s?
+            // "เริ่มเก็บข้อมูลเลยว่าล้มกี่วินาที" -> Start counting.
+            // My logic logs the COMPLETED session. 
+            // If user wants a live counter -> that's different UI.
+            // I will assume Logging Completed Events is safer for the List.
+        }
+    };
 
     // Sitting Time Logic
     const [sittingTime, setSittingTime] = useState(0);
@@ -174,24 +258,12 @@ const SimulationRunning: React.FC<SimulationRunningProps> = ({ config, onStop, o
                         });
                     }
 
-                    // 3. Logic Check
-                    if (poseDetectionService.isFalling(landmarks as any)) { // Cast to avoid strict type mismatch if any
-                        if (!hasTriggeredEvent) {
-                            // TRIGGER FALL EVENT
-                            setHasTriggeredEvent(true);
-                            // Debounce or just trigger once
-                            const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                            const newEvent: SimulationEvent = {
-                                id: crypto.randomUUID(),
-                                type: 'falling',
-                                timestamp: timeStr,
-                                snapshotUrl: '',
-                                isCritical: true
-                            };
-                            onEventAdded(newEvent);
-                            setStickmanPosture('falling'); // Update stickman for fun
-                        }
-                    }
+                    // 3. Logic Check (State Machine)
+                    const detectedPosture = poseDetectionService.getPosture(landmarks as any);
+
+                    // State Refs (need to be defined in component, adding them here in logic context for replacement)
+                    // Note: This block assumes refs are accessible. I will need to add them to the component body.
+                    handlePostureChange(detectedPosture);
                 }
             }
             requestRef.current = requestAnimationFrame(animate);

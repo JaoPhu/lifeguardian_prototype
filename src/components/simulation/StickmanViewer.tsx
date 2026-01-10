@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface StickmanViewerProps {
-    posture: 'standing' | 'sitting' | 'laying' | 'falling';
+    posture: 'standing' | 'sitting' | 'laying' | 'falling' | 'working' | 'sleeping';
     className?: string;
 }
 
@@ -19,11 +19,45 @@ const StickmanViewer: React.FC<StickmanViewerProps> = ({ posture, className }) =
                         {/* Torso */}
                         <path d="M50 40 L50 80" />
                         {/* Legs (Sitting) */}
-                        <path d="M50 80 L30 90 M30 90 L30 120" />
-                        <path d="M50 80 L70 90 M70 90 L70 120" />
+                        <path d="M50 80 L30 110 M30 110 L30 130" />
+                        <path d="M50 80 L70 110 M70 110 L70 130" />
                         {/* Arms (Resting) */}
-                        <path d="M50 50 L30 60 M30 60 L40 70" />
-                        <path d="M50 50 L70 60 M70 60 L60 70" />
+                        <path d="M50 50 L30 70 M30 70 L40 80" />
+                        <path d="M50 50 L70 70 M70 70 L60 80" />
+                    </g>
+                );
+            case 'working': // Working at desk
+                return (
+                    <g stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none">
+                        {/* Head */}
+                        <circle cx="50" cy="30" r="10" />
+                        {/* Torso */}
+                        <path d="M50 40 L50 80" />
+                        {/* Legs (Sitting) */}
+                        <path d="M50 80 L30 110 M30 110 L30 130" />
+                        <path d="M50 80 L70 110 M70 110 L70 130" />
+                        {/* Arms (Typing/On Desk) */}
+                        <path d="M50 50 L30 70 L50 70" />
+                        <path d="M50 50 L70 70 L50 70" />
+                        {/* Desk Line */}
+                        <path d="M20 75 L80 75" strokeWidth="2" opacity="0.6" />
+                    </g>
+                );
+            case 'sleeping': // Sitting sleep (head down)
+                return (
+                    <g stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none">
+                        {/* Head (Tilted down) */}
+                        <circle cx="55" cy="40" r="10" />
+                        {/* Zzz (Sleep text) */}
+                        <path d="M70 20 L80 20 L70 30 L80 30" strokeWidth="2" opacity="0.7" transform="scale(0.8)" />
+                        {/* Torso */}
+                        <path d="M50 45 L50 85" />
+                        {/* Legs (Sitting) */}
+                        <path d="M50 85 L30 115 M30 115 L30 135" />
+                        <path d="M50 85 L70 115 M70 115 L70 135" />
+                        {/* Arms (Folded/Relaxed) */}
+                        <path d="M50 55 L30 75" />
+                        <path d="M50 55 L70 75" />
                     </g>
                 );
             case 'laying':

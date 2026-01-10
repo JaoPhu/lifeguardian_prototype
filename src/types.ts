@@ -10,10 +10,11 @@ export interface VideoConfig {
 
 export interface SimulationEvent {
   id: string;
-  type: 'sitting' | 'laying' | 'falling';
+  type: 'sitting' | 'laying' | 'falling' | 'standing' | 'working';
   timestamp: string; // HH:MM format
   snapshotUrl: string; // Placeholder URL
   isCritical: boolean;
+  duration?: string; // e.g. "1h 30m"
 }
 
 export type UserRole = 'Owner' | 'Admin' | 'Viewer';

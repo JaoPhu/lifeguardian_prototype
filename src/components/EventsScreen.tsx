@@ -13,10 +13,10 @@ interface EventsScreenProps {
 const EventsScreen: React.FC<EventsScreenProps> = ({ camera, onBack, onOpenNotifications, hasUnread }) => {
     // Mock thumbnails mostly static for now as per design image
     const thumbnails = [
-        { label: 'Sitting sleep', posture: 'sitting' },
+        { label: 'Sitting sleep', posture: 'sleeping' },
         { label: 'Sitting clip', posture: 'sitting' },
         { label: 'Stand up', posture: 'standing' },
-        { label: 'Working', posture: 'sitting' },
+        { label: 'Working', posture: 'working' },
     ] as const;
 
     return (
@@ -54,7 +54,7 @@ const EventsScreen: React.FC<EventsScreenProps> = ({ camera, onBack, onOpenNotif
                     <div className="grid grid-cols-4 gap-2">
                         {thumbnails.map((thumb, idx) => (
                             <div key={idx} className="flex flex-col items-center gap-1">
-                                <div className="w-full aspect-square bg-primary-950 rounded-lg flex items-center justify-center border border-primary-900 overflow-hidden relative">
+                                <div className="w-full aspect-square bg-[#0F172A] rounded-lg flex items-center justify-center border border-gray-800 overflow-hidden relative">
                                     <StickmanViewer posture={thumb.posture} className="text-yellow-400 w-10 h-10" />
                                     <div className="absolute top-1 right-1 text-[8px] text-gray-500">Picture {4 - idx}</div>
                                 </div>
@@ -74,20 +74,31 @@ const EventsScreen: React.FC<EventsScreenProps> = ({ camera, onBack, onOpenNotif
                             camera.events.map((event, idx) => (
                                 <div key={event.id || idx} className="flex justify-between items-center border-b border-gray-50 dark:border-gray-700 pb-2 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700 px-2 rounded-lg transition-colors">
                                     <span className="text-gray-600 dark:text-gray-300 font-bold text-sm capitalize">{event.type}</span>
-                                    <span className="text-gray-400 dark:text-gray-500 text-xs font-mono">{event.timestamp}</span>
+                                    <div className="text-right">
+                                        <div className="text-gray-400 dark:text-gray-500 text-xs font-mono">{event.timestamp}</div>
+                                        {event.duration && (
+                                            <div className="text-[#0D9488] text-[10px] font-medium">{event.duration}</div>
+                                        )}
+                                    </div>
                                 </div>
                             ))
                         )}
-                        {/* Fallback mock events if empty for demo visual */}
+                        {/* Fallback mock events for demo */}
                         {camera.events.length === 0 && (
                             <>
                                 <div className="flex justify-between items-center border-b border-gray-50 dark:border-gray-700 pb-2 last:border-0">
                                     <span className="text-gray-600 dark:text-gray-300 font-bold text-sm">Sitting sleep</span>
-                                    <span className="text-gray-400 dark:text-gray-500 text-xs font-mono">15:05</span>
+                                    <div className="text-right">
+                                        <div className="text-gray-400 dark:text-gray-500 text-xs font-mono">15:05</div>
+                                        <div className="text-[#0D9488] text-[10px] font-medium">1h 20m</div>
+                                    </div>
                                 </div>
                                 <div className="flex justify-between items-center border-b border-gray-50 dark:border-gray-700 pb-2 last:border-0">
                                     <span className="text-gray-600 dark:text-gray-300 font-bold text-sm">Sitting clip</span>
-                                    <span className="text-gray-400 dark:text-gray-500 text-xs font-mono">14:45</span>
+                                    <div className="text-right">
+                                        <div className="text-gray-400 dark:text-gray-500 text-xs font-mono">14:45</div>
+                                        <div className="text-[#0D9488] text-[10px] font-medium">20m</div>
+                                    </div>
                                 </div>
                                 <div className="flex justify-between items-center border-b border-gray-50 dark:border-gray-700 pb-2 last:border-0">
                                     <span className="text-gray-600 dark:text-gray-300 font-bold text-sm">Stand up</span>
@@ -95,7 +106,10 @@ const EventsScreen: React.FC<EventsScreenProps> = ({ camera, onBack, onOpenNotif
                                 </div>
                                 <div className="flex justify-between items-center border-b border-gray-50 dark:border-gray-700 pb-2 last:border-0">
                                     <span className="text-gray-600 dark:text-gray-300 font-bold text-sm">Working</span>
-                                    <span className="text-gray-400 dark:text-gray-500 text-xs font-mono">09:10</span>
+                                    <div className="text-right">
+                                        <div className="text-gray-400 dark:text-gray-500 text-xs font-mono">09:10</div>
+                                        <div className="text-[#0D9488] text-[10px] font-medium">4h 03m</div>
+                                    </div>
                                 </div>
                             </>
                         )}

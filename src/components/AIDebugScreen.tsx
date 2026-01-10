@@ -14,14 +14,25 @@ const AIDebugScreen: React.FC<AIDebugScreenProps> = ({ onBack }) => {
     const [isDetecting, setIsDetecting] = useState(false);
     const [showSkeleton, setShowSkeleton] = useState(true);
     const [statusText, setStatusText] = useState('Initializing...');
-    const [eventLog, setEventLog] = useState<string[]>([]);
+
+    // Refs for Loop Access (to avoid stale closures)
+    const isDetectingRef = useRef(false);
+    const fallThresholdRef = useRef(0.35);
+    const minConfidenceRef = useRef(0.5);
+    const showSkeletonRef = useRef(true);
 
     // Configurable Parameters (for tuning)
-    const [fallThreshold, setFallThreshold] = useState(0.35); // Matches default heuristic
-    const [minConfidence, setMinConfidence] = useState(0.5); // Visbility threshold
+    const [fallThreshold, setFallThreshold] = useState(0.35);
+    const [minConfidence, setMinConfidence] = useState(0.5);
 
     const requestRef = useRef<number>();
     const lastVideoTimeRef = useRef<number>(-1);
+
+    // Sync state to refs
+    useEffect(() => { isDetectingRef.current = isDetecting; }, [isDetecting]);
+    useEffect(() => { fallThresholdRef.current = fallThreshold; }, [fallThreshold]);
+    useEffect(() => { minConfidenceRef.current = minConfidence; }, [minConfidence]);
+    useEffect(() => { showSkeletonRef.current = showSkeleton; }, [showSkeleton]);
 
     useEffect(() => {
         const initAI = async () => {
@@ -37,105 +48,107 @@ const AIDebugScreen: React.FC<AIDebugScreenProps> = ({ onBack }) => {
 
         return () => {
             if (requestRef.current) cancelAnimationFrame(requestRef.current);
+            isDetectingRef.current = false; // Stop loop on unmount
         };
     }, []);
 
+    // Main Detection Loop
     const runDetection = async () => {
-        if (!webcamRef.current || !webcamRef.current.video || !canvasRef.current) return;
+        if (!isDetectingRef.current) return; // Stop if not running
 
-        const video = webcamRef.current.video;
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
+        if (webcamRef.current && webcamRef.current.video && canvasRef.current) {
+            const video = webcamRef.current.video;
+            const canvas = canvasRef.current;
+            const ctx = canvas.getContext('2d');
 
-        if (video.readyState === 4 && video.currentTime !== lastVideoTimeRef.current) {
-            lastVideoTimeRef.current = video.currentTime;
+            // Verification: Ensure video is actually playing/ready
+            if (video.readyState === 4) {
+                // Removed currentTime check to force continuous update for "freeze" debugging
+                // if (video.currentTime !== lastVideoTimeRef.current) { ... }
 
-            // Ensure canvas matches video size
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-
-            try {
-                const startTimeMs = performance.now();
-                const landmarks = poseDetectionService.detectForVideo(video, startTimeMs);
-
-                if (ctx) {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear previous frame
-
-                    if (landmarks) {
-                        // Check falling custom logic
-                        // We can override the service logic here locally to test threshold sliders
-                        const nose = landmarks[0];
-                        const leftAnkle = landmarks[27];
-                        const rightAnkle = landmarks[28];
-                        const ankleY = (leftAnkle.y + rightAnkle.y) / 2;
-                        const heightDiff = Math.abs(nose.y - ankleY);
-
-                        const isFalling = heightDiff < fallThreshold; // Use slider value
-
-                        if (showSkeleton) {
-                            drawSkeleton(ctx, landmarks, isFalling);
-                        }
-
-                        if (isFalling) {
-                            // Throttle logs slightly?
-                            // addLog('⚠️ FALL DETECTED'); 
-                            ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
-                            ctx.fillRect(0, 0, canvas.width, canvas.height);
-                            setStatusText('ADT: FALLING!');
-                        } else {
-                            setStatusText('ADT: Normal');
-                        }
-                    } else {
-                        setStatusText('ADT: No Pose');
-                    }
+                // Ensure canvas matches video size exactly
+                if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
                 }
-            } catch (err) {
-                console.error("Detection error:", err);
+
+                try {
+                    const startTimeMs = performance.now();
+                    const landmarks = poseDetectionService.detectForVideo(video, startTimeMs);
+
+                    if (ctx) {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear previous frame
+
+                        if (landmarks) {
+                            // Logic using latest Ref values
+                            const nose = landmarks[0];
+                            const leftAnkle = landmarks[27];
+                            const rightAnkle = landmarks[28];
+                            const ankleY = (leftAnkle.y + rightAnkle.y) / 2;
+                            const heightDiff = Math.abs(nose.y - ankleY);
+
+                            const isFalling = heightDiff < fallThresholdRef.current;
+
+                            if (showSkeletonRef.current) {
+                                const drawSkeleton = (ctx: CanvasRenderingContext2D, landmarks: PoseLandmark[], isAlert: boolean, minConf: number) => {
+                                    // Draw Points
+                                    landmarks.forEach((landmark) => {
+                                        if (landmark.visibility > minConf) {
+                                            ctx.beginPath();
+                                            ctx.arc(landmark.x * ctx.canvas.width, landmark.y * ctx.canvas.height, 5, 0, 2 * Math.PI);
+                                            ctx.fillStyle = isAlert ? 'red' : 'lime';
+                                            ctx.fill();
+                                        }
+                                    });
+
+                                    // Draw Lines (simplified for example, you'd typically map connections)
+                                    // MediaPipe Pose indices: 0: nose, 11: left shoulder, 12: right shoulder, etc.
+                                    const connections = [
+                                        [11, 12], [11, 23], [12, 24], [23, 24], // Torso
+                                        [11, 13], [13, 15], [12, 14], [14, 16], // Arms
+                                        [23, 25], [25, 27], [24, 26], [26, 28]  // Legs
+                                    ];
+
+                                    ctx.strokeStyle = isAlert ? 'red' : 'lime';
+                                    ctx.lineWidth = 2;
+
+                                    connections.forEach(([i, j]) => {
+                                        const landmark1 = landmarks[i];
+                                        const landmark2 = landmarks[j];
+
+                                        if (landmark1 && landmark2 && landmark1.visibility > minConf && landmark2.visibility > minConf) {
+                                            ctx.beginPath();
+                                            ctx.moveTo(landmark1.x * ctx.canvas.width, landmark1.y * ctx.canvas.height);
+                                            ctx.lineTo(landmark2.x * ctx.canvas.width, landmark2.y * ctx.canvas.height);
+                                            ctx.stroke();
+                                        }
+                                    });
+                                };
+                                drawSkeleton(ctx, landmarks, isFalling, minConfidenceRef.current);
+                            }
+
+                            if (isFalling) {
+                                ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+                                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                                setStatusText(`ADT: FALLING! (Diff: ${heightDiff.toFixed(2)})`);
+                            } else {
+                                setStatusText(`ADT: Normal (Diff: ${heightDiff.toFixed(2)})`);
+                            }
+                        } else {
+                            setStatusText('ADT: No Pose');
+                        }
+                    }
+                } catch (err) {
+                    console.error("Detection error:", err);
+                }
             }
         }
 
-        if (isDetecting) {
-            requestRef.current = requestAnimationFrame(runDetection);
-        }
+        // Schedule next frame
+        requestRef.current = requestAnimationFrame(runDetection);
     };
 
-    const drawSkeleton = (ctx: CanvasRenderingContext2D, landmarks: PoseLandmark[], isAlert: boolean) => {
-        // Draw Points
-        landmarks.forEach((landmark) => {
-            if (landmark.visibility > minConfidence) {
-                const x = landmark.x * ctx.canvas.width;
-                const y = landmark.y * ctx.canvas.height;
-
-                ctx.beginPath();
-                ctx.arc(x, y, 4, 0, 2 * Math.PI);
-                ctx.fillStyle = isAlert ? '#ef4444' : '#2dd4bf'; // Red if falling, Teal normal
-                ctx.fill();
-            }
-        });
-
-        // Simple connections (just for visual aid)
-        // MediaPipe Pose Connections (Simplified subset)
-        const connections = [
-            [11, 12], [11, 23], [12, 24], [23, 24], // Torso
-            [11, 13], [13, 15], [12, 14], [14, 16], // Arms
-            [23, 25], [25, 27], [24, 26], [26, 28]  // Legs
-        ];
-
-        ctx.strokeStyle = isAlert ? '#fca5a5' : '#99f6e4';
-        ctx.lineWidth = 2;
-
-        connections.forEach(([i, j]) => {
-            const p1 = landmarks[i];
-            const p2 = landmarks[j];
-            if (p1 && p2 && p1.visibility > minConfidence && p2.visibility > minConfidence) {
-                ctx.beginPath();
-                ctx.moveTo(p1.x * ctx.canvas.width, p1.y * ctx.canvas.height);
-                ctx.lineTo(p2.x * ctx.canvas.width, p2.y * ctx.canvas.height);
-                ctx.stroke();
-            }
-        });
-    };
-
+    // Toggle Handler
     const toggleDetection = () => {
         if (isDetecting) {
             setIsDetecting(false);
@@ -143,6 +156,9 @@ const AIDebugScreen: React.FC<AIDebugScreenProps> = ({ onBack }) => {
             setStatusText('Paused');
         } else {
             setIsDetecting(true);
+            // Wait for state update to propagate to ref? 
+            // Better to force ref set immediately for the loop start
+            isDetectingRef.current = true;
             requestRef.current = requestAnimationFrame(runDetection);
             setStatusText('Detecting...');
         }
