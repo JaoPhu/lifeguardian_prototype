@@ -10,11 +10,13 @@ interface SimulationRunningProps {
     config: VideoConfig;
     onStop: () => void;
     onEventAdded: (event: SimulationEvent) => void;
+    onPostureChange?: (posture: 'standing' | 'sitting' | 'laying' | 'falling') => void;
     onOpenNotifications?: () => void;
     hasUnread?: boolean;
 }
 
-const SimulationRunning: React.FC<SimulationRunningProps> = ({ config, onStop, onEventAdded, onOpenNotifications, hasUnread }) => {
+const SimulationRunning: React.FC<SimulationRunningProps> = (props) => {
+    const { config, onStop, onEventAdded, onOpenNotifications, hasUnread } = props;
     // Video / "Real" Time Logic
     // Default clip length = 5 minutes if not uploaded (as per request), or matches uploaded video
     const [videoTimeSec, setVideoTimeSec] = useState(0);
@@ -24,6 +26,7 @@ const SimulationRunning: React.FC<SimulationRunningProps> = ({ config, onStop, o
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const requestRef = useRef<number>();
+    const postureHistory = useRef<string[]>([]);
 
     // Initialize Simulation Start Time
     const startDateTime = React.useMemo(() => {
@@ -175,22 +178,69 @@ const SimulationRunning: React.FC<SimulationRunningProps> = ({ config, onStop, o
                     }
 
                     // 3. Logic Check
-                    if (poseDetectionService.isFalling(landmarks as any)) { // Cast to avoid strict type mismatch if any
-                        if (!hasTriggeredEvent) {
-                            // TRIGGER FALL EVENT
-                            setHasTriggeredEvent(true);
-                            // Debounce or just trigger once
-                            const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                            const newEvent: SimulationEvent = {
-                                id: crypto.randomUUID(),
-                                type: 'falling',
-                                timestamp: timeStr,
-                                snapshotUrl: '',
-                                isCritical: true
-                            };
-                            onEventAdded(newEvent);
-                            setStickmanPosture('falling'); // Update stickman for fun
+                    const isFalling = poseDetectionService.isFalling(landmarks as any);
+                    const isStanding = poseDetectionService.isStanding(landmarks as any);
+
+                    let detectedPosture: 'standing' | 'sitting' | 'laying' | 'falling' = 'sitting';
+
+                    if (isFalling) {
+                        detectedPosture = 'falling';
+                    } else if (isStanding) {
+                        detectedPosture = 'standing';
+                    } else {
+                        detectedPosture = 'sitting';
+                    }
+
+                    // Helper to capture and trigger event
+                    const triggerEvent = (type: 'standing' | 'sitting' | 'laying' | 'falling', critical: boolean = false) => {
+                        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                        let snapshotUrl = '';
+                        if (canvasRef.current && videoRef.current && videoRef.current.readyState >= 2) {
+                            try {
+                                const tempCanvas = document.createElement('canvas');
+                                tempCanvas.width = videoRef.current.videoWidth;
+                                tempCanvas.height = videoRef.current.videoHeight;
+                                const tempCtx = tempCanvas.getContext('2d');
+                                if (tempCtx) {
+                                    tempCtx.drawImage(videoRef.current, 0, 0);
+                                    snapshotUrl = tempCanvas.toDataURL('image/jpeg', 0.5);
+                                }
+                            } catch (e) {
+                                console.error("Snapshot generation failed:", e);
+                            }
                         }
+
+                        const newEvent: SimulationEvent = {
+                            id: crypto.randomUUID(),
+                            type: type,
+                            timestamp: timeStr,
+                            snapshotUrl: snapshotUrl,
+                            isCritical: critical
+                        };
+                        onEventAdded(newEvent);
+                    };
+
+                    // --- SMOOTHING BUFFER ---
+                    if (!postureHistory.current) postureHistory.current = [];
+                    postureHistory.current.push(detectedPosture);
+                    if (postureHistory.current.length > 5) postureHistory.current.shift();
+
+                    // Check if stable (all recent frames match)
+                    const isStable = postureHistory.current.length >= 3 && postureHistory.current.every(p => p === detectedPosture);
+
+                    if (isStable) {
+                        setStickmanPosture(prev => {
+                            if (prev !== detectedPosture) {
+                                // State Changed! Trigger Event.
+                                const isCritical = detectedPosture === 'falling';
+                                triggerEvent(detectedPosture, isCritical);
+
+                                // Notify parent of change
+                                if (props.onPostureChange) props.onPostureChange(detectedPosture);
+                            }
+                            return detectedPosture;
+                        });
                     }
                 }
             }
@@ -284,6 +334,7 @@ const SimulationRunning: React.FC<SimulationRunningProps> = ({ config, onStop, o
                                     className="absolute inset-0 w-full h-full object-contain"
                                     autoPlay
                                     playsInline
+                                    crossOrigin="anonymous" // Allow canvas capture if source permits
                                     // muted // Let user hear audio? Maybe muted is safer for autoplay
                                     onTimeUpdate={handleVideoTimeUpdate}
                                     onLoadedMetadata={(e) => {

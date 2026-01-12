@@ -4,13 +4,13 @@ export interface VideoConfig {
   startTime: string; // HH:MM
   speed: number;
   date: string;
-  eventType?: 'sitting' | 'laying' | 'falling';
+  eventType?: 'sitting' | 'laying' | 'falling' | 'standing';
   videoUrl?: string;
 }
 
 export interface SimulationEvent {
   id: string;
-  type: 'sitting' | 'laying' | 'falling';
+  type: 'sitting' | 'laying' | 'falling' | 'standing';
   timestamp: string; // HH:MM format
   snapshotUrl: string; // Placeholder URL
   isCritical: boolean;

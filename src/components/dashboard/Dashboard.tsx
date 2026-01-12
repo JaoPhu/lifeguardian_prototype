@@ -82,7 +82,10 @@ const Dashboard: React.FC<DashboardProps> = ({ cameras, onTryDemo, onViewEvents,
                         <div className={`aspect-video rounded-lg flex flex-col items-center justify-center gap-1 mb-2 relative overflow-hidden ${camera.status === 'online' ? 'bg-primary-950' : 'bg-[#D9D9D9] dark:bg-gray-600'}`}>
                             {camera.status === 'online' ? (
                                 <div className="w-full h-full flex items-center justify-center">
-                                    <StickmanViewer posture="sitting" className="w-20 h-20 text-yellow-400" />
+                                    <StickmanViewer
+                                        posture={camera.events.length > 0 ? camera.events[0].type : (camera.config?.eventType ?? 'standing')}
+                                        className={`w-20 h-20 ${(camera.events.length > 0 ? camera.events[0].type : camera.config?.eventType) === 'falling' ? 'text-red-500' : 'text-yellow-400'}`}
+                                    />
                                 </div>
                             ) : (
                                 <div className="text-center">

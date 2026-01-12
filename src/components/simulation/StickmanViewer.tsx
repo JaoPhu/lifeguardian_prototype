@@ -13,67 +13,61 @@ const StickmanViewer: React.FC<StickmanViewerProps> = ({ posture, className }) =
         switch (posture) {
             case 'sitting':
                 return (
-                    <g stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none">
+                    <g stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none">
+                        {/* Sitting on a virtual chair */}
                         {/* Head */}
-                        <circle cx="50" cy="30" r="10" />
-                        {/* Torso */}
-                        <path d="M50 40 L50 80" />
-                        {/* Legs (Sitting) */}
-                        <path d="M50 80 L30 90 M30 90 L30 120" />
-                        <path d="M50 80 L70 90 M70 90 L70 120" />
-                        {/* Arms (Resting) */}
-                        <path d="M50 50 L30 60 M30 60 L40 70" />
-                        <path d="M50 50 L70 60 M70 60 L60 70" />
+                        <circle cx="50" cy="35" r="12" />
+                        {/* Body - slightly varying */}
+                        <path d="M50 47 L50 85" />
+                        {/* Legs - 90 Degree Angle */}
+                        <path d="M50 85 L85 85" />
+                        <path d="M85 85 L85 130" />
+                        {/* Arms - Relaxed on lap */}
+                        <path d="M50 55 L75 75" />
                     </g>
                 );
             case 'laying':
                 return (
-                    <g stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none">
-                        {/* Head */}
-                        <circle cx="20" cy="110" r="10" />
-                        {/* Torso */}
-                        <path d="M30 110 L70 110" />
-                        {/* Legs */}
-                        <path d="M70 110 L100 110" />
-                        <path d="M70 110 L100 115" />
-                        {/* Arms */}
-                        <path d="M35 110 L50 100" />
-                        <path d="M35 110 L50 120" />
+                    <g stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none">
+                        {/* Flat on ground */}
+                        <circle cx="20" cy="110" r="12" />
+                        <path d="M32 110 L90 110" />
+                        {/* Arms up maybe? */}
+                        <path d="M40 110 L40 90" />
+                        <path d="M70 110 L70 90" />
                     </g>
                 );
             case 'falling':
                 return (
-                    <g stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none">
-                        {/* Head */}
-                        <circle cx="40" cy="50" r="10" />
-                        {/* Torso */}
-                        <path d="M40 60 L60 80" />
-                        {/* Legs (Flailing) */}
-                        <path d="M60 80 L40 100" />
-                        <path d="M60 80 L80 90" />
-                        {/* Arms (Flailing) */}
-                        <path d="M45 65 L20 50" />
-                        <path d="M45 65 L70 50" />
-
-                        {/* Motion lines */}
-                        <path d="M80 40 L90 30" strokeOpacity="0.5" strokeWidth="2" />
-                        <path d="M10 80 L5 90" strokeOpacity="0.5" strokeWidth="2" />
+                    <g stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none">
+                        {/* Tilted and panic */}
+                        <g transform="rotate(45, 50, 75)">
+                            <circle cx="50" cy="30" r="12" />
+                            <path d="M50 42 L50 90" />
+                            <path d="M50 90 L30 130" />
+                            <path d="M50 90 L70 130" />
+                            {/* Flailing arms */}
+                            <path d="M50 50 L10 40" />
+                            <path d="M50 50 L90 40" />
+                        </g>
+                        {/* Action Lines for Impact */}
+                        <path d="M90 20 L80 40" strokeWidth="3" strokeOpacity="0.6" />
+                        <path d="M95 30 L85 50" strokeWidth="3" strokeOpacity="0.6" />
                     </g>
                 );
             case 'standing':
             default:
                 return (
-                    <g stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" fill="none">
-                        {/* Head */}
-                        <circle cx="50" cy="30" r="10" />
-                        {/* Torso */}
-                        <path d="M50 40 L50 90" />
-                        {/* Legs */}
-                        <path d="M50 90 L30 130" />
-                        <path d="M50 90 L70 130" />
-                        {/* Arms */}
-                        <path d="M50 50 L20 70" />
-                        <path d="M50 50 L80 70" />
+                    <g stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none">
+                        {/* Strong and tall */}
+                        <circle cx="50" cy="25" r="12" />
+                        <path d="M50 37 L50 85" />
+                        {/* Straight legs */}
+                        <path d="M50 85 L35 135" />
+                        <path d="M50 85 L65 135" />
+                        {/* Arms on Hips/Side */}
+                        <path d="M50 50 L25 70" />
+                        <path d="M50 50 L75 70" />
                     </g>
                 );
         }
