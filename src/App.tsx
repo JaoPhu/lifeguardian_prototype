@@ -353,6 +353,7 @@ function App() {
                                             onOpenNotifications={handleOpenNotifications}
                                             onOpenProfile={handleOpenProfile}
                                             hasUnread={hasUnread}
+                                            onViewStatus={() => handleTabChange('statistics')}
                                         />
                                     ) : isDemoActive ? (
                                         // Simulation/Demo View
