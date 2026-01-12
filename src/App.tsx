@@ -25,6 +25,7 @@ function App() {
     const [simulationState, setSimulationState] = useState<'setup' | 'running'>('setup');
     const [isDemoActive, setIsDemoActive] = useState(false);
     const [activeEventCameraId, setActiveEventCameraId] = useState<string | null>(null);
+    const [selectedStatusCameraId, setSelectedStatusCameraId] = useState<string | null>(null); // To persist selection for Status Tab
     const [showStatistics, setShowStatistics] = useState(false);
 
     // Data State
@@ -101,6 +102,16 @@ function App() {
 
     const handleValidationEvent = useCallback((event: SimulationEvent) => {
         setEvents(prev => [event, ...prev]);
+        // Also update config eventType if it matches
+        if (configRef.current) {
+            setCurrentConfig({ ...configRef.current, eventType: event.type });
+        }
+    }, []);
+
+    const handlePostureChange = useCallback((posture: 'standing' | 'sitting' | 'laying' | 'falling') => {
+        if (configRef.current && configRef.current.eventType !== posture) {
+            setCurrentConfig({ ...configRef.current, eventType: posture });
+        }
     }, []);
 
     const handleTryDemo = () => {
@@ -120,8 +131,15 @@ function App() {
     const handleTabChange = (tab: 'overview' | 'statistics' | 'status' | 'users' | 'settings' | 'notifications') => {
         setActiveTab(tab);
         setShowStatistics(false); // Reset statistics view when changing tabs
+        if (tab === 'status' && !selectedStatusCameraId) {
+            // If switching to status manually, default to demo or first cam
+            const defaultCam = cameras.find(c => c.source === 'demo') || cameras[0];
+            if (defaultCam) setSelectedStatusCameraId(defaultCam.id);
+        }
         if (tab !== 'overview') {
             setIsDemoActive(false);
+            // Don't clear activeEventCameraId immediately if we want to return? 
+            // Actually, keep it simple.
             setActiveEventCameraId(null);
         }
     };
@@ -177,6 +195,13 @@ function App() {
                                     onBack={handleBackFromEvents}
                                     onOpenNotifications={handleOpenNotifications}
                                     hasUnread={hasUnread}
+                                    onViewStatus={() => {
+                                        if (activeEventCameraId) {
+                                            setSelectedStatusCameraId(activeEventCameraId);
+                                            setActiveTab('status');
+                                            setActiveEventCameraId(null); // Leave events screen
+                                        }
+                                    }}
                                 />
                             ) : isDemoActive ? (
                                 // Simulation/Demo View
@@ -209,6 +234,7 @@ function App() {
                                                 config={currentConfig}
                                                 onStop={handleStopSimulation}
                                                 onEventAdded={handleValidationEvent}
+                                                onPostureChange={handlePostureChange}
                                                 onOpenNotifications={handleOpenNotifications}
                                                 hasUnread={hasUnread}
                                             />
@@ -242,19 +268,23 @@ function App() {
                     {/* Status Tab */}
                     {activeTab === 'status' && (
                         (() => {
+
                             // Shared Logic for Status & Statistics
-                            // Derive status from the LAST applied config (or current one)
-                            // Strategy: Find the latest 'demo' camera.
-                            const demoCam = cameras.find(c => c.source === 'demo');
+                            // Derive status from the SELECTED camera (or default to demo)
+                            const targetCamera = cameras.find(c => c.id === selectedStatusCameraId) || cameras.find(c => c.source === 'demo') || cameras[0];
 
                             let status: MonitorStatus = 'none';
-                            let config = demoCam?.config || null;
-                            const events = demoCam?.events || [];
+                            let config = targetCamera?.config || null;
+                            const events = targetCamera?.events || [];
 
-                            if (demoCam && demoCam.config) {
-                                if (demoCam.config.eventType === 'falling') status = 'emergency';
-                                else if (demoCam.config.eventType === 'sitting') status = 'warning';
-                                else if (demoCam.config.eventType === 'laying') status = 'normal';
+                            if (targetCamera && targetCamera.config) {
+                                // Simple Logic:
+                                // Falling -> Emergency
+                                // Sitting -> Warning (Assumed prolonged)
+                                // Laying -> Normal (Resting)
+                                if (targetCamera.config.eventType === 'falling') status = 'emergency';
+                                else if (targetCamera.config.eventType === 'sitting') status = 'warning';
+                                else if (targetCamera.config.eventType === 'laying') status = 'normal';
                                 else status = 'normal';
                             }
 
