@@ -13,7 +13,7 @@ This project is built using a cross-platform mobile approach (Flutter), focusing
 - **Framework**: [Flutter](https://flutter.dev/) (Channel stable, ^3.4.3)
 - **State Management**: [Riverpod](https://riverpod.dev/) (flutter_riverpod)
 - **Navigation**: [GoRouter](https://pub.dev/packages/go_router)
-- **AI Engine**: [Google ML Kit Pose Detection](https://developers.google.com/ml-kit/vision/pose-detection) (On-device real-time processing)
+- **AI Engine**: [Google ML Kit Pose Detection](https://developers.google.com/ml-kit/vision/pose-detection) (**Powered by MediaPipe** for on-device real-time processing)
 - **Charts**: [FL Chart](https://pub.dev/packages/fl_chart)
 - **Package Manager**: [pub](https://pub.dev/)
 
