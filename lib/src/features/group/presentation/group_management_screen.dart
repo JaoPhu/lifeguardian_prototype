@@ -1,0 +1,709 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+class GroupManagementScreen extends StatefulWidget {
+  const GroupManagementScreen({super.key});
+
+  @override
+  State<GroupManagementScreen> createState() => _GroupManagementScreenState();
+}
+
+class _GroupManagementScreenState extends State<GroupManagementScreen> {
+  // Mock Data
+  final String _inviteCode = 'LG-4921';
+  String _activeTab = 'my-group'; // 'my-group' or 'join-group'
+  String _joinCode = '';
+  String _groupName = 'My Home Group';
+
+  final List<Map<String, dynamic>> _members = [
+    {
+      'id': '1',
+      'name': 'Anna',
+      'role': 'Owner (You)',
+      'roleType': 'Owner',
+      'avatarSeed': 'Anna',
+      'email': 'anna@example.com',
+      'phone': '081-222-3333'
+    },
+    {
+      'id': '2',
+      'name': 'Grandson',
+      'role': 'Viewer',
+      'roleType': 'Viewer',
+      'avatarSeed': 'Grandson',
+      'email': 'grandson@example.com',
+      'phone': '081-333-4444'
+    },
+    {
+      'id': '3',
+      'name': 'Doctor Somchai',
+      'role': 'Admin',
+      'roleType': 'Admin',
+      'avatarSeed': 'Somchai',
+      'email': 'somchai@example.com',
+      'phone': '081-444-5555'
+    },
+  ];
+
+  final List<Map<String, dynamic>> _pendingRequests = [
+    {
+      'id': 'p1',
+      'name': 'Auntie Ju',
+      'avatarSeed': 'Ju'
+    }
+  ];
+
+  void _showRenameDialog() {
+    final controller = TextEditingController(text: _groupName);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Rename Group'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(hintText: "Enter new group name"),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              setState(() => _groupName = controller.text);
+              Navigator.pop(context);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRoleSelector(Map<String, dynamic> member) {
+    if (member['roleType'] == 'Owner') return;
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Change role for ${member['name']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            const SizedBox(height: 16),
+            ListTile(
+              title: const Text('Admin'),
+              subtitle: const Text('Can manage and view all data.'),
+              onTap: () {
+                 // Mock update
+                 Navigator.pop(context);
+              },
+            ),
+            ListTile(
+              title: const Text('Viewer'),
+              subtitle: const Text('Can only view data.'),
+              onTap: () {
+                // Mock update
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _viewMemberProfile(Map<String, dynamic> member) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  image: DecorationImage(
+                    image: NetworkImage('https://api.dicebear.com/7.x/avataaars/svg?seed=${member['avatarSeed']}'),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(member['name'], style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              Text(member['role'], style: const TextStyle(color: Colors.grey)),
+              const Divider(height: 32),
+              Row(
+                children: [
+                  const Icon(Icons.email, size: 20, color: Color(0xFF0D9488)),
+                  const SizedBox(width: 12),
+                  Text(member['email'] ?? 'No email'),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  const Icon(Icons.phone, size: 20, color: Color(0xFF0D9488)),
+                  const SizedBox(width: 12),
+                  Text(member['phone'] ?? 'No phone'),
+                ],
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0D9488),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Close'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handleCopyCode() {
+    Clipboard.setData(ClipboardData(text: _inviteCode));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Invite code copied to clipboard')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF111827) : Colors.white,
+      body: Column(
+        children: [
+          // Header
+         Container(
+            padding: const EdgeInsets.only(top: 56, bottom: 24, left: 24, right: 24),
+            decoration: const BoxDecoration(
+              color: Color(0xFF0D9488),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'LifeGuardian',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        const Icon(Icons.notifications, color: Colors.white, size: 24),
+                        const SizedBox(width: 16),
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.yellow.shade100,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                            image: const DecorationImage(
+                              image: NetworkImage('https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Manage user groups',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const Text(
+                  'Share health information or join to care for others.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFFCCFBF1), // teal-100
+                  ),
+                ),
+                const SizedBox(height: 24),
+                
+                // Tabs
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _activeTab = 'my-group'),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: _activeTab == 'my-group' ? const Color(0xFF0D9488) : Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.group,
+                                  size: 16,
+                                  color: _activeTab == 'my-group' ? Colors.white : Colors.grey,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'My Group',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: _activeTab == 'my-group' ? Colors.white : Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _activeTab = 'join-group'),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: _activeTab == 'join-group' ? const Color(0xFF0D9488) : Colors.transparent,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.smartphone,
+                                  size: 16,
+                                  color: _activeTab == 'join-group' ? Colors.white : Colors.grey,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Join Group',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: _activeTab == 'join-group' ? Colors.white : Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Content
+          Expanded(
+            child: _activeTab == 'my-group' ? _buildMyGroupContent() : _buildJoinGroupContent(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMyGroupContent() {
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        // Invite Code Card
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            children: [
+              Text(
+                'Your group invitation code (Invite Code)',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade500,
+                ),
+              ),
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: _handleCopyCode,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _inviteCode,
+                      style: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0D9488),
+                        letterSpacing: 2,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.copy, color: Colors.grey),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Send this code to the administrator to authorize access to the data.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.grey.shade400,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 32),
+
+        // Pending Requests
+        if (_pendingRequests.isNotEmpty) ...[
+          const Row(
+            children: [
+              Text('⏳', style: TextStyle(fontSize: 18)),
+              SizedBox(width: 8),
+              Text(
+                'Request to join (1)',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0D9488),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ..._pendingRequests.map((req) => _buildRequestItem(req)),
+          const SizedBox(height: 32),
+        ],
+
+        // Members List
+        Row(
+          children: [
+            const Text('👑', style: TextStyle(fontSize: 18)),
+            const SizedBox(width: 8),
+            Text(
+              'Group members (${_members.length})',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0D9488),
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.edit, size: 16, color: Colors.grey),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ..._members.map((member) => _buildMemberItem(member)),
+      ],
+    );
+  }
+
+  Widget _buildJoinGroupContent() {
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Enter Invitation Code',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  onChanged: (value) => setState(() => _joinCode = value),
+                  decoration: InputDecoration(
+                    hintText: 'Ex. LG-9821',
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.transparent),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade200),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFF0D9488)),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: _joinCode.isNotEmpty ? () {} : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0D9488),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'Join',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'เมื่อเข้าร่วมแล้ว คุณจะสามารถดูสถานะและการแจ้งเตือนจากเจ้าของกลุ่มได้',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade400,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRequestItem(Map<String, dynamic> req) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.orange.shade50),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  shape: BoxShape.circle,
+                  image: DecorationImage(
+                     image: NetworkImage('https://api.dicebear.com/7.x/avataaars/svg?seed=${req['avatarSeed']}'),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      req['name'],
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const Text(
+                      'Requesting to join...',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {},
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0D9488),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Approve', style: TextStyle(fontSize: 12)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {},
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey.shade100,
+                    foregroundColor: Colors.grey.shade600,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Decline', style: TextStyle(fontSize: 12)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMemberItem(Map<String, dynamic> member) {
+    final roleType = member['roleType'];
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    Color roleBgColor;
+    Color roleTextColor;
+    Color roleBorderColor;
+
+    switch (roleType) {
+      case 'Owner':
+        roleBgColor = Colors.red.shade50;
+        roleTextColor = Colors.red.shade600;
+        roleBorderColor = Colors.red.shade200;
+        break;
+      case 'Admin':
+        roleBgColor = Colors.orange.shade50;
+        roleTextColor = Colors.orange.shade600;
+        roleBorderColor = Colors.orange.shade200;
+        break;
+      case 'Viewer':
+      default:
+        roleBgColor = Colors.teal.shade50;
+        roleTextColor = Colors.teal.shade600;
+        roleBorderColor = Colors.teal.shade200;
+        break;
+    }
+
+    return GestureDetector(
+      onTap: () => _viewMemberProfile(member),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.grey.shade900 : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                image: DecorationImage(
+                  image: NetworkImage('https://api.dicebear.com/7.x/avataaars/svg?seed=${member['avatarSeed']}'),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    member['name'],
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: isDark ? Colors.grey.shade200 : const Color(0xFF374151),
+                    ),
+                  ),
+                  Text(
+                    member['role'],
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            GestureDetector(
+              onTap: () => _showRoleSelector(member),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: roleBgColor,
+                  border: Border.all(color: roleBorderColor),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  roleType,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: roleTextColor,
+                  ),
+                ),
+              ),
+            ),
+            if (roleType != 'Owner') ...[
+              const SizedBox(width: 8),
+              const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
