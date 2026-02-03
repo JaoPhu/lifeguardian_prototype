@@ -43,6 +43,9 @@ class _PoseDetectorViewState extends State<PoseDetectorView> with TickerProvider
   bool _isAnalysisComplete = false;
   bool _isPaused = false;
   bool _isIdentificationMode = false;
+  bool _showDiagnosticInsights = true;
+  double _healthScore = 98.0;
+  String _diagnosticMessage = "Scanning Systemic Alignment...";
 
   // Video Player state
   VideoPlayerController? _videoController;
@@ -168,15 +171,27 @@ class _PoseDetectorViewState extends State<PoseDetectorView> with TickerProvider
       }
       
       setState(() {
-        // Occasionally trigger a fall for the demo (less frequent now with 50ms interval)
+        final time = DateTime.now().millisecondsSinceEpoch / 1000.0;
+        
+        // Diagnostic Engine Logic (Simulated based on pose)
         if (_random.nextDouble() < 0.01) {
           _isLaying = true;
           _isWalking = false;
           _statusText = "FALL DETECTED!";
-        } else if (_random.nextDouble() < 0.05) {
+          _diagnosticMessage = "CRITICAL: Impact Detected at Hip Level";
+          _healthScore = 45.0 + _random.nextDouble() * 10;
+        } else {
           _isLaying = false;
-          _isWalking = _random.nextBool();
-          _statusText = _isWalking ? "Walking / Active" : "Standing";
+          _isWalking = math.sin(time) > 0;
+          _statusText = _isWalking ? "Active Movement" : "Stable Stance";
+          
+          if (_isWalking) {
+            _diagnosticMessage = "Gait Analysis: Symmetric (94%)";
+            _healthScore = 95.0 + math.sin(time) * 2;
+          } else {
+            _diagnosticMessage = "Spine Alignment: Within Normal Range";
+            _healthScore = 98.0 + math.cos(time) * 1;
+          }
         }
         
         // Generate mock persons
@@ -619,11 +634,7 @@ class _PoseDetectorViewState extends State<PoseDetectorView> with TickerProvider
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        if (widget.videoPath != null)
-                          VideoPlayer(_videoController!)
-                        else
-                          _buildCameraPreview(size),
-                          
+                        _buildCameraContent(),
                         if (_persons.isNotEmpty && _imageSize != null && _imageRotation != null)
                           CustomPaint(
                             painter: PosePainter(
@@ -633,6 +644,7 @@ class _PoseDetectorViewState extends State<PoseDetectorView> with TickerProvider
                               _cameraController?.description.lensDirection ?? CameraLensDirection.back,
                             ),
                           ),
+                        if (_showDiagnosticInsights) _buildDiagnosticOverlay(),
                       ],
                     ),
                   ),
@@ -1088,6 +1100,108 @@ class _PoseDetectorViewState extends State<PoseDetectorView> with TickerProvider
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCameraContent() {
+    if (widget.videoPath != null && _videoController != null && _videoController!.value.isInitialized) {
+      return VideoPlayer(_videoController!);
+    } else {
+      final size = MediaQuery.of(context).size;
+      return _buildCameraPreview(size);
+    }
+  }
+
+  Widget _buildDiagnosticOverlay() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Positioned(
+      top: 16,
+      right: 16,
+      child: Container(
+        width: 180,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: (isDark ? Colors.black : Colors.white).withValues(alpha: 0.85),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: const Color(0xFF0D9488).withValues(alpha: 0.3),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0D9488).withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.psychology, color: Color(0xFF0D9488), size: 14),
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'AI DIAGNOSIS',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1,
+                    color: Color(0xFF0D9488),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Health Score', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
+                Text(
+                  '${_healthScore.toStringAsFixed(1)}%',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: _healthScore < 70 ? Colors.red : const Color(0xFF0D9488),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(2),
+              child: LinearProgressIndicator(
+                value: _healthScore / 100,
+                backgroundColor: const Color(0xFF0D9488).withValues(alpha: 0.1),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  _healthScore < 70 ? Colors.red : const Color(0xFF0D9488),
+                ),
+                minHeight: 4,
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Divider(height: 1),
+            const SizedBox(height: 10),
+            Text(
+              _diagnosticMessage,
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                height: 1.4,
               ),
             ),
           ],
