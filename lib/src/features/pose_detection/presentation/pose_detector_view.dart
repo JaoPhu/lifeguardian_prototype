@@ -30,7 +30,8 @@ class _PoseDetectorViewState extends State<PoseDetectorView> {
   @override
   void initState() {
     super.initState();
-    _initializeCamera();
+    super.initState();
+    // _initializeCamera(); // Disabled as per user request to use Video Clips instead
   }
 
   Future<void> _initializeCamera() async {
