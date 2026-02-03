@@ -53,48 +53,33 @@ class PosePainter extends CustomPainter {
       ..style = PaintingStyle.fill
       ..color = color;
 
-    // Translation helpers
-    double translateX(double x, InputImageRotation rotation, Size size, Size absoluteImageSize) {
-      final double scaleX = size.width / absoluteImageSize.width;
-      final double scaleY = size.height / absoluteImageSize.height;
-      final double scale = math.min(scaleX, scaleY);
-      
-      final double offsetX = (size.width - absoluteImageSize.width * scale) / 2;
-
-      switch (rotation) {
-        case InputImageRotation.rotation90deg:
-          return x * size.width / absoluteImageSize.height;
-        case InputImageRotation.rotation270deg:
-          return size.width - x * size.width / absoluteImageSize.height;
-        default:
-          return x * scale + offsetX;
+    double translateX(double x) {
+      if (rotation == InputImageRotation.rotation90deg || rotation == InputImageRotation.rotation270deg) {
+        return x * size.width / absoluteImageSize.height;
+      } else {
+        return x * size.width / absoluteImageSize.width;
       }
     }
 
-    double translateY(double y, InputImageRotation rotation, Size size, Size absoluteImageSize) {
-      final double scaleX = size.width / absoluteImageSize.width;
-      final double scaleY = size.height / absoluteImageSize.height;
-      final double scale = math.min(scaleX, scaleY);
-      
-      final double offsetY = (size.height - absoluteImageSize.height * scale) / 2;
-
-      switch (rotation) {
-        case InputImageRotation.rotation90deg:
-        case InputImageRotation.rotation270deg:
-          return y * size.height / absoluteImageSize.width;
-        default:
-          return y * scale + offsetY;
+    double translateY(double y) {
+      if (rotation == InputImageRotation.rotation90deg || rotation == InputImageRotation.rotation270deg) {
+        return y * size.height / absoluteImageSize.width;
+      } else {
+        return y * size.height / absoluteImageSize.height;
       }
     }
 
     Offset translate(PoseLandmark landmark) {
-      double x = translateX(landmark.x, rotation, size, absoluteImageSize);
-      double y = translateY(landmark.y, rotation, size, absoluteImageSize);
+      double x = translateX(landmark.x);
+      double y = translateY(landmark.y);
 
       if (cameraLensDirection == CameraLensDirection.front) {
         switch (rotation) {
           case InputImageRotation.rotation90deg:
           case InputImageRotation.rotation270deg:
+            // For 90/270, the x-axis in buffer might need different mirroring
+            // but standard MLKit usually mirrors at the end if front-facing
+            x = size.width - x;
             break;
           default:
             x = size.width - x;

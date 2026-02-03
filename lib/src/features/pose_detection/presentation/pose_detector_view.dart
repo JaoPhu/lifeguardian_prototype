@@ -41,6 +41,7 @@ class _PoseDetectorViewState extends State<PoseDetectorView> with TickerProvider
   DateTime _simTime = DateTime.now();
   final List<String> _analysisEvents = [];
   bool _isAnalysisComplete = false;
+  bool _isPaused = false;
   bool _isIdentificationMode = false;
 
   // Video Player state
@@ -126,6 +127,8 @@ class _PoseDetectorViewState extends State<PoseDetectorView> with TickerProvider
     _simTime = DateTime.now();
     _simTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) return;
+      if (_isPaused) return;
+      
       setState(() {
         // One second equals 1 minute simulation
         _simTime = _simTime.add(const Duration(minutes: 1));
@@ -155,6 +158,14 @@ class _PoseDetectorViewState extends State<PoseDetectorView> with TickerProvider
   void _startMockAnalysis() {
     _analysisTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
       if (!mounted) return;
+      if (_isPaused) return;
+
+      // Check if video is finished
+      if (_videoController != null && 
+          _videoController!.value.position >= _videoController!.value.duration) {
+        _onAnalysisComplete();
+        return;
+      }
       
       setState(() {
         // Occasionally trigger a fall for the demo
@@ -177,39 +188,48 @@ class _PoseDetectorViewState extends State<PoseDetectorView> with TickerProvider
   }
 
   List<PersonPose> _generateMockPersons() {
-    final width = _imageSize?.width ?? 480;
-    final center = width / 2;
+    // Standard 16:9 vertical resolution if size is null
+    final width = _imageSize?.width ?? 1080;
+    final height = _imageSize?.height ?? 1920;
+    final centerX = width / 2;
     
-    // Person 1 (Teal)
-    final p1Landmarks = {
-      PoseLandmarkType.nose: PoseLandmark(type: PoseLandmarkType.nose, x: center - 50, y: 150, z: 0, likelihood: 0.9),
-      PoseLandmarkType.leftShoulder: PoseLandmark(type: PoseLandmarkType.leftShoulder, x: center - 100, y: 200, z: 0, likelihood: 0.9),
-      PoseLandmarkType.rightShoulder: PoseLandmark(type: PoseLandmarkType.rightShoulder, x: center, y: 200, z: 0, likelihood: 0.9),
-      PoseLandmarkType.leftHip: PoseLandmark(type: PoseLandmarkType.leftHip, x: center - 80, y: 350, z: 0, likelihood: 0.9),
-      PoseLandmarkType.rightHip: PoseLandmark(type: PoseLandmarkType.rightHip, x: center - 20, y: 350, z: 0, likelihood: 0.9),
-      PoseLandmarkType.leftKnee: PoseLandmark(type: PoseLandmarkType.leftKnee, x: center - 80, y: 450, z: 0, likelihood: 0.9),
-      PoseLandmarkType.rightKnee: PoseLandmark(type: PoseLandmarkType.rightKnee, x: center - 20, y: 450, z: 0, likelihood: 0.9),
-      PoseLandmarkType.leftAnkle: PoseLandmark(type: PoseLandmarkType.leftAnkle, x: center - 80, y: 550, z: 0, likelihood: 0.9),
-      PoseLandmarkType.rightAnkle: PoseLandmark(type: PoseLandmarkType.rightAnkle, x: center - 20, y: 550, z: 0, likelihood: 0.9),
-    };
-
-    // Person 2 (Orange) - further right
-    final p2Landmarks = {
-      PoseLandmarkType.nose: PoseLandmark(type: PoseLandmarkType.nose, x: center + 80, y: 180, z: 0, likelihood: 0.9),
-      PoseLandmarkType.leftShoulder: PoseLandmark(type: PoseLandmarkType.leftShoulder, x: center + 40, y: 230, z: 0, likelihood: 0.9),
-      PoseLandmarkType.rightShoulder: PoseLandmark(type: PoseLandmarkType.rightShoulder, x: center + 120, y: 230, z: 0, likelihood: 0.9),
-      PoseLandmarkType.leftHip: PoseLandmark(type: PoseLandmarkType.leftHip, x: center + 50, y: 380, z: 0, likelihood: 0.9),
-      PoseLandmarkType.rightHip: PoseLandmark(type: PoseLandmarkType.rightHip, x: center + 110, y: 380, z: 0, likelihood: 0.9),
-      PoseLandmarkType.leftKnee: PoseLandmark(type: PoseLandmarkType.leftKnee, x: center + 50, y: 480, z: 0, likelihood: 0.9),
-      PoseLandmarkType.rightKnee: PoseLandmark(type: PoseLandmarkType.rightKnee, x: center + 110, y: 480, z: 0, likelihood: 0.9),
-      PoseLandmarkType.leftAnkle: PoseLandmark(type: PoseLandmarkType.leftAnkle, x: center + 50, y: 580, z: 0, likelihood: 0.9),
-      PoseLandmarkType.rightAnkle: PoseLandmark(type: PoseLandmarkType.rightAnkle, x: center + 110, y: 580, z: 0, likelihood: 0.9),
-    };
-
-    return [
-      PersonPose(landmarks: p1Landmarks, color: const Color(0xFF0D9488), isLaying: _isLaying, isWalking: _isWalking),
-      PersonPose(landmarks: p2Landmarks, color: Colors.orange, isLaying: false, isWalking: false),
+    // Number of people to detect (n = 1 to 3)
+    final numPeople = 1 + _random.nextInt(3);
+    final List<PersonPose> mockPersons = [];
+    
+    final personColors = [
+      const Color(0xFF0D9488), // Teal
+      Colors.orange,
+      Colors.blue,
     ];
+
+    for (int i = 0; i < numPeople; i++) {
+      // Offset each person slightly but keep them in the "focus" (center area)
+      final offsetX = (i - (numPeople - 1) / 2) * (width * 0.25);
+      final personCenterX = centerX + offsetX;
+      final verticalStart = height * 0.2;
+      
+      final landmarks = {
+        PoseLandmarkType.nose: PoseLandmark(type: PoseLandmarkType.nose, x: personCenterX, y: verticalStart, z: 0, likelihood: 0.9),
+        PoseLandmarkType.leftShoulder: PoseLandmark(type: PoseLandmarkType.leftShoulder, x: personCenterX - width * 0.1, y: verticalStart + height * 0.05, z: 0, likelihood: 0.9),
+        PoseLandmarkType.rightShoulder: PoseLandmark(type: PoseLandmarkType.rightShoulder, x: personCenterX + width * 0.1, y: verticalStart + height * 0.05, z: 0, likelihood: 0.9),
+        PoseLandmarkType.leftHip: PoseLandmark(type: PoseLandmarkType.leftHip, x: personCenterX - width * 0.08, y: verticalStart + height * 0.2, z: 0, likelihood: 0.9),
+        PoseLandmarkType.rightHip: PoseLandmark(type: PoseLandmarkType.rightHip, x: personCenterX + width * 0.08, y: verticalStart + height * 0.2, z: 0, likelihood: 0.9),
+        PoseLandmarkType.leftKnee: PoseLandmark(type: PoseLandmarkType.leftKnee, x: personCenterX - width * 0.08, y: verticalStart + height * 0.35, z: 0, likelihood: 0.9),
+        PoseLandmarkType.rightKnee: PoseLandmark(type: PoseLandmarkType.rightKnee, x: personCenterX + width * 0.08, y: verticalStart + height * 0.35, z: 0, likelihood: 0.9),
+        PoseLandmarkType.leftAnkle: PoseLandmark(type: PoseLandmarkType.leftAnkle, x: personCenterX - width * 0.08, y: verticalStart + height * 0.5, z: 0, likelihood: 0.9),
+        PoseLandmarkType.rightAnkle: PoseLandmark(type: PoseLandmarkType.rightAnkle, x: personCenterX + width * 0.08, y: verticalStart + height * 0.5, z: 0, likelihood: 0.9),
+      };
+
+      mockPersons.add(PersonPose(
+        landmarks: landmarks,
+        color: personColors[i % personColors.length],
+        isLaying: i == 0 ? _isLaying : false,
+        isWalking: i == 0 ? _isWalking : false,
+      ));
+    }
+
+    return mockPersons;
   }
 
   Future<void> _initializeCamera() async {
@@ -655,8 +675,9 @@ class _PoseDetectorViewState extends State<PoseDetectorView> with TickerProvider
           const SizedBox(height: 16),
           
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              _buildAnalysisToggleButton(),
               Text(
                 'Speed : ${_playbackSpeed.toInt()}X',
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -974,6 +995,56 @@ class _PoseDetectorViewState extends State<PoseDetectorView> with TickerProvider
       scale: scale,
       child: Center(
         child: CameraPreview(_cameraController!),
+      ),
+    );
+  }
+
+  Widget _buildAnalysisToggleButton() {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _isPaused = !_isPaused;
+          if (_videoController != null) {
+            if (_isPaused) {
+              _videoController!.pause();
+            } else {
+              _videoController!.play();
+            }
+          }
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: _isPaused ? Colors.orange : const Color(0xFF0D9488),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: (_isPaused ? Colors.orange : const Color(0xFF0D9488)).withValues(alpha: 0.3),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _isPaused ? Icons.play_arrow : Icons.stop,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              _isPaused ? 'Start' : 'Stop',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
