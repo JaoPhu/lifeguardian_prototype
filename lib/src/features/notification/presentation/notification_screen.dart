@@ -103,7 +103,7 @@ class NotificationScreen extends StatelessWidget {
           // Content Body
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              padding: const EdgeInsets.only(left: 16, right: 16, top: 24, bottom: 120),
               itemCount: notifications.length,
               itemBuilder: (context, index) {
                 final item = notifications[index];
@@ -111,6 +111,7 @@ class NotificationScreen extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 16),
                   child: Container(
                     padding: const EdgeInsets.all(16),
+
                     decoration: BoxDecoration(
                       color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(16),
@@ -196,9 +197,9 @@ class NotificationScreen extends StatelessWidget {
                   ),
                 );
               },
-              // Bottom Spacer
-              footer: const SizedBox(height: 120),
             ),
+
+
           ),
         ],
       ),
