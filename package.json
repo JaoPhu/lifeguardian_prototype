@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "homepage": "https://JaoPhu.github.io/lifeguardian",
+  "homepage": "https://JaoPhu.github.io/lifeguardian_prototype",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
