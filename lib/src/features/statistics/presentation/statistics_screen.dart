@@ -335,23 +335,23 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
 
                           // Clock Labels (Centered in the gap)
                           const Positioned(
-                            top: 38,
+                            top: 36, // Moved up from 38
                             child: Text(
                               '12',
                               style: TextStyle(
                                 color: Color(0xFF4A5568),
-                                fontSize: 14,
+                                fontSize: 13, // Slightly smaller for premium feel
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                           ),
                           const Positioned(
-                            bottom: 38,
+                            bottom: 36, // Moved down from 38
                             child: Text(
                               '6',
                               style: TextStyle(
                                 color: Color(0xFF4A5568),
-                                fontSize: 14,
+                                fontSize: 13, // Slightly smaller for premium feel
                                 fontWeight: FontWeight.w500,
                               ),
                             ),

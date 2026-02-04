@@ -24,6 +24,10 @@ class CameraNotifier extends StateNotifier<List<Camera>> {
   void updateCameraEvents(String id, List<SimulationEvent> events) {
     state = state.map((c) => c.id == id ? c.copyWith(events: events) : c).toList();
   }
+
+  void removeCamera(String id) {
+    state = state.where((c) => c.id != id).toList();
+  }
 }
 
 final cameraProvider = StateNotifierProvider<CameraNotifier, List<Camera>>((ref) {

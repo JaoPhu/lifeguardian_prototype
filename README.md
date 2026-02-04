@@ -47,6 +47,34 @@ flutter build apk # For Android
 flutter build ios # For iOS
 ```
 
+### 🍎 iOS Setup (Mac Only)
+If you are running on macOS and want to build for iOS, you must install dependencies for CocoaPods:
+
+```bash
+# 1. Enter iOS directory
+cd ios
+
+# 2. Install Pods
+pod install
+
+# 3. Return to root
+cd ..
+```
+
+## ❓ Troubleshooting
+
+### iOS: "Framework Pods_Runner not found"
+If you encounter this error, it means the CocoaPods dependencies are not linked correctly. Run the following:
+
+```bash
+flutter clean
+flutter pub get
+cd ios
+pod install
+cd ..
+```
+Then try running the app again.
+
 ---
 
 ## 📂 Project Structure

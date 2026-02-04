@@ -18,6 +18,9 @@ import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:async';
+import '../../dashboard/data/camera_provider.dart' as cam_provider;
+import '../../dashboard/domain/camera.dart' as cam_domain;
+import '../../statistics/domain/simulation_event.dart';
 import 'dart:math' as math;
 
 class PoseDetectorView extends ConsumerStatefulWidget {
@@ -56,7 +59,8 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> with Ticker
   VideoPlayerController? _videoController;
   Timer? _simTimer;
   bool _isAnalysisLoopRunning = false;
-  final Map<int, Map<String, _OneEuroFilter>> _filters = {};
+  // Performance Optimization: Use List<_OneEuroFilter> [x, y, z] to avoid String keys
+  final Map<int, Map<PoseLandmarkType, List<_OneEuroFilter>>> _filters = {};
 
   // Snapshot state
   final ScreenshotController _screenshotController = ScreenshotController();
@@ -195,7 +199,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> with Ticker
         // Update local _persons list so we know how many people are being tracked
         if (mounted) {
           final personColors = [
-            const Color(0xFF0D9488),
+            const Color(0xFF0D9492),
             Colors.orange, Colors.blue, Colors.purple,
             Colors.pink, Colors.amber, Colors.cyan, Colors.lime,
           ];
@@ -288,7 +292,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> with Ticker
 
         final List<PersonPose> detectedPersons = [];
         final List<Color> personColors = [
-          const Color(0xFF0D9488), // Teal
+          const Color(0xFF0D9492), // Teal
           Colors.orange,
           Colors.blue,
           Colors.purple,
@@ -346,7 +350,8 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> with Ticker
             final healthState = ref.read(healthStatusProvider);
             if (healthState.currentActivity != detectedActivity) {
                // Capture snapshot asynchronously to not block UI
-               _captureSnapshot().then((path) {
+               // FORCE capture on activity change to ensure gallery has images
+               _captureSnapshot(force: true).then((path) {
                  ref.read(healthStatusProvider.notifier).updateActivity(detectedActivity, snapshotPath: path);
                });
             }
@@ -425,7 +430,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> with Ticker
       
       final List<PersonPose> detectedPersons = [];
       final List<Color> personColors = [
-        const Color(0xFF0D9488), // Teal
+        const Color(0xFF0D9492), // Teal
         Colors.orange,
         Colors.blue,
         Colors.purple,
@@ -501,14 +506,16 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> with Ticker
     }
   }
 
-  Future<String?> _captureSnapshot() async {
+  Future<String?> _captureSnapshot({bool force = false}) async {
     // Prevent multiple captures for the same fall (debounce 30 seconds)
     if (_isCapturing) {
       return null;
     }
-    if (widget.videoPath != null && 
+    
+    // Only check debounce if NOT forced
+    if (!force && widget.videoPath != null && 
         _lastCaptureTime != null && 
-        DateTime.now().difference(_lastCaptureTime!).inSeconds < 15) { // Reduced to 15s for more responsiveness in events
+        DateTime.now().difference(_lastCaptureTime!).inSeconds < 5) { // Reduced to 5s to ensure we get more event photos
       return null;
     }
 
@@ -516,7 +523,8 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> with Ticker
     _lastCaptureTime = DateTime.now();
 
     try {
-      final image = await _screenshotController.capture();
+      // Capture with higher quality for gallery
+      final image = await _screenshotController.capture(pixelRatio: 1.5);
       if (image != null) {
         final directory = await getTemporaryDirectory();
         final fileName = 'event_${DateTime.now().millisecondsSinceEpoch}.png';
@@ -532,7 +540,9 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> with Ticker
     } catch (e) {
       debugPrint("Error capturing snapshot: $e");
     } finally {
-      _isCapturing = false;
+      if (mounted) {
+         _isCapturing = false;
+      }
     }
     return null;
   }
@@ -661,7 +671,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> with Ticker
                         });
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _isPaused ? const Color(0xFF0D9488) : const Color(0xFFD97706),
+                        backgroundColor: _isPaused ? const Color(0xFF0D9492) : const Color(0xFFD97706),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(24),
@@ -748,7 +758,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> with Ticker
               'Camera view : Desk',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF0D9488),
+                color: Color(0xFF0D9492),
                 fontSize: 16,
               ),
             ),
@@ -893,7 +903,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> with Ticker
           const SizedBox(height: 16),
           
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 'Speed : ${_playbackSpeed.toInt()}X',
@@ -903,7 +913,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> with Ticker
           ),
           const SizedBox(height: 4),
           const Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 'One second equals 1 minutes.',
@@ -935,7 +945,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> with Ticker
                       child: CircularProgressIndicator(
                         strokeWidth: 4,
                         value: _loadingController.value,
-                        color: const Color(0xFF0D9488),
+                        color: const Color(0xFF0D9492),
                         backgroundColor: isDark ? Colors.white10 : const Color(0xFFF1F5F9),
                       ),
                     );
@@ -992,7 +1002,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> with Ticker
   }
 
   String _getColorName(Color color) {
-    if (color == const Color(0xFF0D9488)) {
+    if (color == const Color(0xFF0D9492)) {
       return "Teal";
     }
     if (color == Colors.orange) {
@@ -1086,15 +1096,61 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> with Ticker
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () => context.pop(),
+                  onPressed: () async {
+                    // Capture snapshot for the dashboard thumbnail
+                    // Force capture on finish to GUARANTEE a cover image
+                    final snapshotPath = await _captureSnapshot(force: true);
+                    
+                    // Save results to dashboard
+                    final healthState = ref.read(healthStatusProvider);
+                    final events = List<SimulationEvent>.from(healthState.events);
+                    
+                    // If we have a snapshot but no events have one, add/update one
+                    if (snapshotPath != null) {
+                        if (events.isEmpty) {
+                           events.add(SimulationEvent(
+                             id: DateTime.now().millisecondsSinceEpoch.toString(),
+                             type: 'analysis_complete',
+                             timestamp: "${DateTime.now().hour}:${DateTime.now().minute}", 
+                             date: DateTime.now().toString().split(' ')[0],
+                             isCritical: false,
+                             snapshotUrl: snapshotPath,
+                             description: 'Demo Analysis Completed',
+                           ));
+                        } else {
+                           // Update the most recent event with the snapshot if it doesn't have one
+                           if (events.first.snapshotUrl == null) {
+                             events[0] = events.first.copyWith(snapshotUrl: snapshotPath);
+                           }
+                        }
+                    }
+
+                    final demoCamera = cam_domain.Camera(
+                      id: 'demo-camera-${DateTime.now().millisecondsSinceEpoch}',
+                      name: 'Demo Camera ${DateTime.now().minute}', // Dynamic name as requested
+                      status: cam_domain.CameraStatus.online,
+                      source: cam_domain.CameraSource.demo,
+                      events: events,
+                      config: cam_domain.CameraConfig(
+                        date: DateTime.now().toString().split(' ')[0],
+                        startTime: "${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}",
+                        eventType: events.any((e) => e.isCritical) ? "Critical" : "Standard",
+                      ),
+                    );
+                    
+                    ref.read(cam_provider.cameraProvider.notifier).addCamera(demoCamera);
+                    
+                    // Navigate to Dashboard (Overview)
+                    context.go('/overview');
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF0D9488),
+                    foregroundColor: const Color(0xFF0D9492),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(24),
                     ),
                   ),
-                  child: const Text('Back to Demo Setup', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                  child: const Text('Finish & View Dashboard', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                 ),
               ),
               const SizedBox(height: 24),
@@ -1140,7 +1196,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> with Ticker
           Container(
             padding: const EdgeInsets.all(12),
             decoration: const BoxDecoration(
-              color: Color(0xFF0D9488),
+              color: Color(0xFF0D9492),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.add, color: Colors.white),
@@ -1154,7 +1210,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> with Ticker
 
   Widget _buildIdentificationScreen() {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D9488),
+      backgroundColor: const Color(0xFF0D9492),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -1331,7 +1387,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> with Ticker
                     color: const Color(0xFF0D9492).withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.psychology, color: Color(0xFF0D9488), size: 14),
+                  child: const Icon(Icons.psychology, color: Color(0xFF0D9492), size: 14),
                 ),
                 const SizedBox(width: 8),
                 const Text(
@@ -1340,7 +1396,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> with Ticker
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1,
-                    color: Color(0xFF0D9488),
+                    color: Color(0xFF0D9492),
                   ),
                 ),
               ],
@@ -1355,7 +1411,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> with Ticker
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
-                    color: _healthScore < 70 ? Colors.red : const Color(0xFF0D9488),
+                    color: _healthScore < 70 ? Colors.red : const Color(0xFF0D9492),
                   ),
                 ),
               ],
@@ -1367,7 +1423,7 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> with Ticker
                 value: _healthScore / 100,
                 backgroundColor: const Color(0xFF0D9492).withValues(alpha: 0.1),
                 valueColor: AlwaysStoppedAnimation<Color>(
-                  _healthScore < 70 ? Colors.red : const Color(0xFF0D9488),
+                  _healthScore < 70 ? Colors.red : const Color(0xFF0D9492),
                 ),
                 minHeight: 4,
               ),
@@ -1391,24 +1447,21 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> with Ticker
 
   Map<PoseLandmarkType, PoseLandmark> _applyOneEuroFilter(int personId, Map<PoseLandmarkType, PoseLandmark> landmarks) {
     final t = DateTime.now().millisecondsSinceEpoch / 1000.0;
-    final Map<PoseLandmarkType, PoseLandmark> filteredMap = {};
     
     _filters.putIfAbsent(personId, () => {});
     final personFilters = _filters[personId]!;
 
     landmarks.forEach((type, landmark) {
-      final keyX = '${type.name}_x';
-      final keyY = '${type.name}_y';
-      final keyZ = '${type.name}_z';
-      
-      // High-speed responsiveness tuning (Beta 0.05 for faster reaction to movement)
-      final fX = personFilters.putIfAbsent(keyX, () => _OneEuroFilter(minCutoff: 1.0, beta: 0.05));
-      final fY = personFilters.putIfAbsent(keyY, () => _OneEuroFilter(minCutoff: 1.0, beta: 0.05));
-      final fZ = personFilters.putIfAbsent(keyZ, () => _OneEuroFilter(minCutoff: 1.0, beta: 0.05));
+      // Get or create filters for X, Y, Z (index 0, 1, 2)
+      final filters = personFilters.putIfAbsent(type, () => [
+        _OneEuroFilter(minCutoff: 1.0, beta: 0.05), // X
+        _OneEuroFilter(minCutoff: 1.0, beta: 0.05), // Y
+        _OneEuroFilter(minCutoff: 1.0, beta: 0.05), // Z
+      ]);
 
-      final filteredX = fX.filter(landmark.x, t);
-      final filteredY = fY.filter(landmark.y, t);
-      final filteredZ = fZ.filter(landmark.z, t);
+      final filteredX = filters[0].filter(landmark.x, t);
+      final filteredY = filters[1].filter(landmark.y, t);
+      final filteredZ = filters[2].filter(landmark.z, t);
 
       // --- Anatomical Validation (Simple Outlier Rejection) ---
       // If the confidence is too low or the jump is physically impossible for a human joint,
@@ -1416,18 +1469,19 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> with Ticker
       bool isAnatomicallyPossible = true;
       if (landmark.likelihood < 0.3) isAnatomicallyPossible = false;
       
-      // Add more complex anatomical constraints here if needed (e.g., bone length consistency)
-
-      filteredMap[type] = PoseLandmark(
-        type: type,
-        x: isAnatomicallyPossible ? filteredX : (fX._xPrev ?? filteredX),
-        y: isAnatomicallyPossible ? filteredY : (fY._xPrev ?? filteredY),
-        z: isAnatomicallyPossible ? filteredZ : (fZ._xPrev ?? filteredZ),
-        likelihood: landmark.likelihood,
-      );
+      // If valid, update the landmark with filtered values
+      if (isAnatomicallyPossible) {
+        landmarks[type] = PoseLandmark(
+          type: type,
+          x: filteredX,
+          y: filteredY,
+          z: filteredZ,
+          likelihood: landmark.likelihood,
+        );
+      }
     });
     
-    return filteredMap;
+    return landmarks;
   }
 }
 
@@ -1435,13 +1489,13 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> with Ticker
 class _OneEuroFilter {
   final double minCutoff;
   final double beta;
-  final double dCutoff;
+  final double dCutoff = 1.0;
   
   double? _xPrev;
   double? _dxPrev;
   double? _tPrev;
 
-  _OneEuroFilter({this.minCutoff = 1.0, this.beta = 0.0, this.dCutoff = 1.0});
+  _OneEuroFilter({this.minCutoff = 1.0, this.beta = 0.0});
 
   double filter(double x, double t) {
     if (_tPrev == null || _xPrev == null) {

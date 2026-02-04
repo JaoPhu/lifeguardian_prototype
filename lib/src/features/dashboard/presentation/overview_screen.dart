@@ -171,14 +171,38 @@ class OverviewScreen extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Row(
               children: [
-                Text(
-                  camera.name,
-                  style: const TextStyle(
-                    fontSize: 16, // Slightly larger font for name
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0D9488),
+                Expanded(
+                  child: Text(
+                    camera.name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0D9488),
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                if (camera.status != CameraStatus.offline)
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert, color: Colors.grey),
+                    onSelected: (value) {
+                      if (value == 'delete') {
+                        ref.read(cameraProvider.notifier).removeCamera(camera.id);
+                      }
+                    },
+                    itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                      const PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete, color: Colors.red, size: 20),
+                            SizedBox(width: 8),
+                            Text('Delete', style: TextStyle(color: Colors.red)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),
@@ -214,12 +238,12 @@ class OverviewScreen extends ConsumerWidget {
                       ),
                     ],
                   )
-                : (healthState.events.isNotEmpty && healthState.events.any((e) => e.snapshotUrl != null))
+                : (camera.events.isNotEmpty && camera.events.any((e) => e.snapshotUrl != null))
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(12),
                         child: Image.file(
-                          File(healthState.events.firstWhere((e) => e.snapshotUrl != null).snapshotUrl!),
-                          fit: BoxFit.cover,
+                          File(camera.events.firstWhere((e) => e.snapshotUrl != null).snapshotUrl!),
+                          fit: BoxFit.contain,
                         ),
                       )
                     : null,
