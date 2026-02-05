@@ -220,7 +220,7 @@ class HealthStatusNotifier extends StateNotifier<HealthState> {
         
         updatedEvents[0] = lastEvent.copyWith(
           durationSeconds: durationSec,
-          duration: "${durationHrs} hr", // Update legacy string for compatibility
+          duration: "$durationHrs hr", // Update legacy string for compatibility
         );
       }
     }
@@ -354,7 +354,7 @@ class HealthStatusNotifier extends StateNotifier<HealthState> {
         
         updatedEvents[0] = activeEvent.copyWith(
           durationSeconds: durationSec,
-          duration: "${durationHrs} hr",
+          duration: "$durationHrs hr",
         );
       }
     }

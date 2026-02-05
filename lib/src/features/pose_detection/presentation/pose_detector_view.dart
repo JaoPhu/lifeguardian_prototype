@@ -1116,10 +1116,10 @@ class _PoseDetectorViewState extends ConsumerState<PoseDetectorView> with Ticker
     final events = healthState.events;
     
     // Count occurrences
-    int sittingCount = events.where((e) => e.type == 'sitting' || e.type == 'slouching').length;
-    int standingCount = events.where((e) => e.type == 'standing').length;
-    int walkingCount = events.where((e) => e.type == 'walking' || e.type == 'exercise').length;
-    int emergencyCount = events.where((e) => e.type == 'falling' || e.type == 'near_fall' || e.type == 'laying').length;
+    final int sittingCount = events.where((e) => e.type == 'sitting' || e.type == 'slouching').length;
+    final int standingCount = events.where((e) => e.type == 'standing').length;
+    final int walkingCount = events.where((e) => e.type == 'walking' || e.type == 'exercise').length;
+    final int emergencyCount = events.where((e) => e.type == 'falling' || e.type == 'near_fall' || e.type == 'laying').length;
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(

@@ -233,9 +233,6 @@ class EventsScreen extends ConsumerWidget {
   }
 
   Widget _buildGalleryItem(BuildContext context, SimulationEvent event, String cameraName) {
-    final isCritical = event.isCritical;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
       width: 180, // Narrower as in prototype
       padding: const EdgeInsets.all(8),
