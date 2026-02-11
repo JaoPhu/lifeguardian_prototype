@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../features/profile/data/user_repository.dart';
 
-class GroupManagementScreen extends StatefulWidget {
+class GroupManagementScreen extends ConsumerStatefulWidget {
   const GroupManagementScreen({super.key});
 
   @override
-  State<GroupManagementScreen> createState() => _GroupManagementScreenState();
+  ConsumerState<GroupManagementScreen> createState() => _GroupManagementScreenState();
 }
 
-class _GroupManagementScreenState extends State<GroupManagementScreen> {
+class _GroupManagementScreenState extends ConsumerState<GroupManagementScreen> {
   // Mock Data
   final String _inviteCode = 'LG-4921';
   String _activeTab = 'my-group'; // 'my-group' or 'join-group'
@@ -159,6 +162,7 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final user = ref.watch(userProvider);
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF111827) : Colors.white,
       body: Column(
@@ -193,16 +197,19 @@ class _GroupManagementScreenState extends State<GroupManagementScreen> {
                       children: [
                         const Icon(Icons.notifications, color: Colors.white, size: 24),
                         const SizedBox(width: 16),
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: Colors.yellow.shade100,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                            image: const DecorationImage(
-                              image: NetworkImage('https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'),
-                              fit: BoxFit.cover,
+                        GestureDetector(
+                          onTap: () => context.push('/profile'),
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: Colors.yellow.shade100,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                              image: DecorationImage(
+                                image: NetworkImage(user.avatarUrl),
+                                fit: BoxFit.cover,
+                              ),
                             ),
                           ),
                         ),

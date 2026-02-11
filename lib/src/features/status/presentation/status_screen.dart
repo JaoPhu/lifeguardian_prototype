@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../pose_detection/data/health_status_provider.dart';
 import '../../notification/presentation/notification_bell.dart';
+import '../../profile/data/user_repository.dart';
 
 class StatusScreen extends ConsumerWidget {
   const StatusScreen({super.key});
@@ -10,6 +11,7 @@ class StatusScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final healthState = ref.watch(healthStatusProvider);
+    final user = ref.watch(userProvider);
     final config = _getStatusConfig(healthState.status, context);
 
     return Scaffold(
@@ -54,8 +56,8 @@ class StatusScreen extends ConsumerWidget {
                           color: Colors.yellow.shade100,
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 2),
-                          image: const DecorationImage(
-                            image: NetworkImage('https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'),
+                          image: DecorationImage(
+                            image: NetworkImage(user.avatarUrl),
                             fit: BoxFit.cover,
                           ),
                         ),

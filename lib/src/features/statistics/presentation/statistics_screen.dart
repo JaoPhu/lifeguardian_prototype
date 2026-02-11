@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../pose_detection/data/health_status_provider.dart';
 import '../domain/simulation_event.dart';
 import '../../notification/presentation/notification_bell.dart';
+import '../../profile/data/user_repository.dart';
 
 class StatisticsScreen extends ConsumerStatefulWidget {
   const StatisticsScreen({super.key});
@@ -182,6 +183,7 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
   @override
   Widget build(BuildContext context) {
     final healthState = ref.watch(healthStatusProvider);
+    final user = ref.watch(userProvider);
     final stats = _calculateDurations(healthState.events);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -217,8 +219,8 @@ class _StatisticsScreenState extends ConsumerState<StatisticsScreen> {
                           color: Colors.yellow.shade100,
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 2),
-                          image: const DecorationImage(
-                            image: NetworkImage('https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'),
+                          image: DecorationImage(
+                            image: NetworkImage(user.avatarUrl),
                             fit: BoxFit.cover,
                           ),
                         ),

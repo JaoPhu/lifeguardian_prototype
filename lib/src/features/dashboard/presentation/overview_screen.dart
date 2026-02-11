@@ -6,12 +6,15 @@ import '../data/camera_provider.dart';
 import '../domain/camera.dart';
 import '../../pose_detection/data/health_status_provider.dart';
 import '../../notification/presentation/notification_bell.dart';
+import '../../profile/data/user_repository.dart';
 
 class OverviewScreen extends ConsumerWidget {
   const OverviewScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(userProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cameras = ref.watch(cameraProvider);
     final healthState = ref.watch(healthStatusProvider);
 
@@ -57,8 +60,8 @@ class OverviewScreen extends ConsumerWidget {
                           color: Colors.yellow.shade100,
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 2),
-                          image: const DecorationImage(
-                            image: NetworkImage('https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'),
+                          image: DecorationImage(
+                            image: NetworkImage(user.avatarUrl),
                             fit: BoxFit.cover,
                           ),
                         ),

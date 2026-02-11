@@ -13,7 +13,7 @@ class AppTheme {
         brightness: Brightness.light,
         surface: Colors.white,
       ),
-      textTheme: GoogleFonts.plusJakartaSansTextTheme(),
+      textTheme: GoogleFonts.interTextTheme(),
       scaffoldBackgroundColor: Colors.white,
       cardColor: Colors.white,
     );
@@ -27,7 +27,7 @@ class AppTheme {
         brightness: Brightness.dark,
         surface: const Color(0xFF1F2937),
       ),
-      textTheme: GoogleFonts.plusJakartaSansTextTheme(
+      textTheme: GoogleFonts.interTextTheme(
         ThemeData(brightness: Brightness.dark).textTheme,
       ),
       scaffoldBackgroundColor: const Color(0xFF111827),

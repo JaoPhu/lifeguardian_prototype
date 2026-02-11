@@ -85,7 +85,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/edit-profile',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const EditProfileScreen(),
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final fromRegistration = extra?['fromRegistration'] as bool? ?? false;
+          return EditProfileScreen(fromRegistration: fromRegistration);
+        },
       ),
       GoRoute(
         path: '/ai-debug',

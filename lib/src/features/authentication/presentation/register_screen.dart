@@ -143,7 +143,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: ElevatedButton(
                   onPressed: () {
                     // Logic to validate and register
-                    context.go('/edit-profile');
+                    context.push('/edit-profile', extra: {'fromRegistration': true});
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0D9488),
